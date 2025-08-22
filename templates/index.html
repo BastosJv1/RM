@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard de Requisições</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            font-weight: 700;
+            font-size: 2.4rem;
+            color: #1f2937;
+        }
+        a.button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        a.button:hover {
+            background-color: #1d4ed8;
+        }
+        .req-list {
+            max-width: 900px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+            box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        thead {
+            background-color: #2563eb;
+            color: white;
+        }
+        tbody tr:hover {
+            background: #f0f9ff;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            color: white;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        .status.AGUARANAPOCAO {
+            background-color: #facc15;
+        }
+        .status.EM-ANDAMENTO {
+            background-color: #3b82f6;
+        }
+        .status.PAUSADA {
+            background-color: #ef4444;
+        }
+        .status.CONCLUIDA {
+            background-color: #22c55e;
+        }
+        .timeline {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+        .timeline ul {
+            padding-left: 18px;
+            margin: 6px 0 0 0;
+        }
+        .timeline li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Requisições</h1>
+        <a href="{{ url_for('novo_pedido') }}" class="button" aria-label="Novo Pedido">+ Novo Pedido</a>
+    </header>
+
+    <section class="req-list">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descrição</th>
+                    <th>Solicitante</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Timeline</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in requisicoes %}
+                <tr>
+                    <td>{{ r.id_req }}</td>
+                    <td>{{ r.descricao }}</td>
+                    <td>{{ r.requisitante }}</td>
+                    <td>{{ r.funcionario_responsavel.nome if r.funcionario_responsavel else "Nenhum" }}</td>
+                    <td><span class="status {{ r.status | replace(' ', '-') }}">{{ r.status }}</span></td>
+                    <td class="timeline">
+                        <ul>
+                            {% for status, data in r.mostrar_timeline() %}
+                            <li><strong>{{ data }}:</strong> {{ status }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" style="text-align:center; padding: 20px;">Nenhuma requisição encontrada.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</body>
+</html>

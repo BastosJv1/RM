@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Controle de Solicitações</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f3f4f6;
+    color: #1f2937;
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 {
+    text-align: center;
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 40px;
+    color: #2563eb;
+  }
+  a.button-link {
+    display: inline-block;
+    background-color: #2563eb;
+    color: white;
+    padding: 12px 26px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-decoration: none;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+    transition: background-color 0.3s ease;
+  }
+  a.button-link:hover {
+    background-color: #1e40af;
+    box-shadow: 0 6px 20px rgba(30, 64, 175, 0.6);
+  }
+  .table-wrapper {
+    overflow-x: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    border-radius: 14px;
+    background: white;
+    padding: 10px;
+  }
+  form {
+    margin: 0;
+  }
+  table {
+    width: 1600px;
+    border-collapse: separate;
+    border-spacing: 0 16px;
+    font-size: 1rem;
+    table-layout: fixed;
+    user-select: none;
+  }
+  thead th {
+    background: #2563eb;
+    color: white;
+    padding: 18px 12px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 1.125rem;
+    border-radius: 14px 14px 0 0;
+    user-select: none;
+    position: relative;
+    border-left: 2px solid #1e40af;
+  }
+  thead th:first-child {
+    border-left: none;
+  }
+  thead th .resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    background-color: transparent;
+    z-index: 10;
+    transition: background-color 0.3s ease;
+  }
+  thead th .resizer:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+  }
+  tbody tr {
+    background: #f9fafb;
+    border-radius: 14px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.07);
+    transition: background-color 0.25s ease;
+  }
+  tbody tr:hover {
+    background-color: #ebf2ff;
+  }
+  tbody td {
+    padding: 18px 12px;
+    vertical-align: top;
+    border-left: 2px solid #d1d5db;
+    border-right: 2px solid #d1d5db;
+    color: #334155;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  tbody td:first-child {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #1d4ed8;
+    white-space: nowrap;
+    border-left: none;
+  }
+  tbody td:last-child {
+    border-right: none;
+  }
+  /* Inputs inside cells */
+  input[type="text"],
+  select,
+  textarea,
+  input[type="date"] {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.8px solid #cbd5e1;
+    font-size: 0.95rem;
+    color: #334155;
+    font-weight: 500;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  select {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 30px;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px 18px;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  input[type="date"] {
+    white-space: nowrap;
+  }
+  button[type="submit"] {
+    margin-top: 28px;
+    width: 100%;
+    background-color: #22c55e;
+    color: white;
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 16px 0;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 5px 25px rgba(34, 197, 94, 0.6);
+    transition: background-color 0.3s ease;
+  }
+  button[type="submit"]:hover {
+    background-color: #16a34a;
+  }
+  /* Flash message */
+  .flash-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4ade80;
+    color: #065f46;
+    padding: 15px 32px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 6px 18px rgba(74, 222, 128, 0.7);
+    z-index: 10;
+    animation: fadeInOut 3.5s ease forwards;
+  }
+  @keyframes fadeInOut {
+    0% {opacity: 0; transform: translate(-50%, -25px);}
+    10%, 90% {opacity: 1; transform: translate(-50%, 0);}
+    100% {opacity: 0; transform: translate(-50%, -25px);}
+  }
+</style>
+</head>
+<body>
+<button onclick="window.history.back()" style="
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+  transition: background-color 0.3s ease;
+  z-index: 1000;
+">← Voltar</button>
+
+<script>
+  const btn = document.querySelector('button[onclick="window.history.back()"]');
+  btn.addEventListener('mouseover', () => btn.style.backgroundColor = '#1e40af');
+  btn.addEventListener('mouseout', () => btn.style.backgroundColor = '#2563eb');
+</script>
+
+<h1>Controle das Solicitações</h1>
+
+<a class="button-link" href="{{ url_for('kanban') }}">Timeline das RM's</a>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="flash-message">{{ messages[0] }}</div>
+  {% endif %}
+{% endwith %}
+
+<div class="table-wrapper">
+<form method="POST" action="{{ url_for('controle') }}">
+  <table id="controlTable">
+    <thead>
+      <tr>
+        <th>RM<div class="resizer"></div></th>
+        <th>Solicitante<div class="resizer"></div></th>
+        <th>Itens<div class="resizer"></div></th>
+        <th>Centro de Custo<div class="resizer"></div></th>
+        <th>Status<div class="resizer"></div></th>
+        <th>Comprador<div class="resizer"></div></th>
+        <th>Obs. Comprador<div class="resizer"></div></th>
+        <th>Data Conclusão<div class="resizer"></div></th>
+        <th>Obs. Almoxarifado<div class="resizer"></div></th>
+        <th>Nº OC<div class="resizer"></div></th>
+        <th>Salvar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in requisicoes %}
+      <tr>
+        <td>{{ r.id_req }}<input type="hidden" name="rm" value="{{ r.id_req }}" /></td>
+        <td>{{ r.requisitante }}</td>
+        <td>
+          {% for item in r.itens %}
+            {{ item.quantidade }} x {{ item.descricao }}{% if not loop.last %}<br>{% endif %}
+          {% endfor %}
+        </td>
+        <td><input type="text" name="centro_custo" value="{{ r.centro_custo }}" /></td>
+        <td><select name="status_solicitacao" aria-label="Status da solicitação">
+          {% for st in ["AGUARDANDO APROVAÇÃO", "SOLICITAÇÃO APROVADA", "SOLICITAÇÃO PARCIALMENTE AUTORIZADA", "NÃO APROVADA", "APENAS COTAÇÃO", "COMPRA EFETUADA", "EM EXPEDIÇÃO", "PEDIDO ENTREGUE", "PEDIDO DUPLICADO", "PEDIDO CANCELADO"] %}
+            <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select></td>
+        <td><select name="comprador_responsavel" aria-label="Comprador responsável">
+          {% for c in ["Karen", "Bastos", "Leandro"] %}
+            <option value="{{ c }}" {% if r.comprador_responsavel == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select></td>
+        <td><textarea name="obs_comprador" aria-label="Observações do comprador" style="white-space: normal;">{{ r.observacoes_comprador }}</textarea></td>
+        <td><input type="date" name="data_conclusao" value="{{ r.data_conclusao }}" aria-label="Data da conclusão"></td>
+        <td><textarea name="obs_almoxarifado" aria-label="Observações do almoxarifado" style="white-space: normal;">{{ r.observacoes_almoxarifado }}</textarea></td>
+        <td><input type="text" name="numero_oc" value="{{ r.numero_oc }}" aria-label="Número da OC"></td>
+        <td><button type="submit" aria-label="Salvar alterações da RM {{ r.id_req }}">Salvar</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+</div>
+
+<script>
+  const table = document.getElementById('controlTable');
+  const cols = table.querySelectorAll('th');
+  let startX, startWidth, currentCol, currentColIndex;
+
+  cols.forEach((th, index) => {
+    if(index === cols.length -1) return; // no resizer for last column
+
+    const resizer = document.createElement('div');
+    resizer.classList.add('resizer');
+    th.appendChild(resizer);
+
+    resizer.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      currentCol = th;
+      currentColIndex = index;
+      startX = e.pageX;
+      startWidth = currentCol.offsetWidth;
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
+
+  function onMouseMove(e) {
+    let newWidth = startWidth + (e.pageX - startX);
+    if(newWidth > 60) {
+      currentCol.style.width = newWidth + 'px';
+      table.querySelectorAll('tbody tr').forEach(row => {
+        row.cells[currentColIndex].style.width = newWidth + 'px';
+      });
+    }
+  }
+
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+</script>
+
+<style>
+  .resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    background-color: transparent;
+    z-index: 10;
+    transition: background-color 0.3s ease;
+  }
+  .resizer:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+  }
+  th {
+    position: relative;
+    border-left: 2px solid #1e40af;
+  }
+  th:first-child {
+    border-left: none;
+  }
+  tbody td {
+    border-left: 2px solid #d1d5db;
+    border-right: 2px solid #d1d5db;
+  }
+  tbody td:first-child {
+    border-left: none;
+  }
+  tbody td:last-child {
+    border-right: none;
+  }
+</style>
+
+</body>
+</html>

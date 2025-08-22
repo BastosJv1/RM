@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bem-vindo ao Sistema de Requisições</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 40px 50px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+    }
+    h1 {
+      margin-bottom: 30px;
+      color: #111827;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    a.button {
+      display: block;
+      background: #2563eb;
+      color: white;
+      padding: 15px 0;
+      margin: 12px 0;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    a.button:hover {
+      background-color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bem-vindo ao Sistema de Requisições</h1>
+    <a href="{{ url_for('novo_pedido') }}" class="button" aria-label="Fazer novo pedido">Fazer Novo Pedido</a>
+    <a href="{{ url_for('login') }}" class="button" aria-label="Entrar área administrativa">Área Administrativa</a>
+  </div>
+</body>
+</html>
