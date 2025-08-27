@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Acompanhamento de Entregas - Almoxarifado</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #fafafa;
+  }
+  h1 {
+    color: #2563eb;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .alerta {
+    background-color: #fbbf24;
+    color: #78350f;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: bold;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  th, td {
+    padding: 12px 18px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+  }
+  th {
+    background-color: #e0e7ff;
+    color: #2563eb;
+  }
+  tr:hover {
+    background-color: #f0f4ff;
+  }
+  tr.vencida {
+    background-color: #fecaca;
+  }
+  tr.proxima {
+    background-color: #fef3c7;
+  }
+</style>
+</head>
+<body>
+<button onclick="window.location.href='{{ url_for('controle') }}'" 
+        style="padding:5px 10px; width: 80px; font-size: 0.9rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+    ← Voltar
+</button>
+
+<h1>Acompanhamento de Entregas - Almoxarifado</h1>
+
+{% for alerta in alertas %}
+  <div class="alerta" role="alert">{{ alerta }}</div>
+{% endfor %}
+
+<table aria-label="Tabela de previsão de entregas das OCs">
+  <thead>
+    <tr>
+      <th>Nº OC</th>
+      <th>Material</th>
+      <th>Quantidade</th>
+      <th>Centro de Custo</th>
+      <th>Previsão de Entrega</th>
+      <th>Local de Entrega</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in itens %}
+    <tr class="{% if item.alerta == 'Vencida' %}vencida{% elif item.alerta == 'Próxima a vencer' %}proxima{% endif %}">
+      <td>{{ item.numero_oc }}</td>
+      <td>{{ item.material }}</td>
+      <td>{{ item.quantidade }}</td>
+      <td>{{ item.centro_custo }}</td>
+      <td>{{ item.previsao_entrega }}</td>
+      <td>{{ item.local_entrega }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center;">Nenhuma previsão de entrega cadastrada.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+</body>
+</html>

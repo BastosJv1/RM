@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ordem de Compra</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f6f8;
+    color: #1a1a1a;
+    margin: 30px auto;
+    max-width: 960px;
+    padding: 30px 40px;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 2.5rem;
+    color: #0052cc;
+    margin-bottom: 36px;
+    text-align: center;
+    letter-spacing: 0.03em;
+    user-select: none;
+  }
+
+  /* Estilização das abas */
+  .tabs {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 20px;
+    user-select: none;
+  }
+  .tab {
+    padding: 14px 24px;
+    border-radius: 12px 12px 0 0;
+    cursor: pointer;
+    font-weight: 700;
+    color: #0052cc;
+    background: #e7f1ff;
+    border: 1.6px solid #b3c0d1;
+    border-bottom: none;
+    transition: background-color 0.3s ease;
+  }
+  .tab.active {
+    background-color: #fff;
+    border-bottom: 1.6px solid #fff;
+  }
+  .tab-content {
+    border: 1.6px solid #b3c0d1;
+    border-radius: 0 12px 12px 12px;
+    background: #fff;
+    padding: 20px 30px;
+  }
+
+  /* Seu CSS original para o formulário */
+  form {
+    background: #fff;
+    padding: 36px 48px;
+    border-radius: 14px;
+    box-shadow: 0 12px 24px rgba(0, 82, 204, 0.15);
+    border: 1px solid #dde6f0;
+  }
+  .form-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .form-group {
+    flex: 1 1 45%;
+  }
+  .form-group.full-width {
+    flex: 1 1 100%;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    color: #42526e;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    user-select: none;
+  }
+  input[type=text],
+  input[type=date],
+  input[type=url],
+  input[type=number],
+  select,
+  textarea {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    border: 1.6px solid #b3c0d1;
+    border-radius: 12px;
+    box-sizing: border-box;
+    font-family: inherit;
+    color: #102a43;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  input[type=text]:focus,
+  input[type=date]:focus,
+  input[type=url]:focus,
+  input[type=number]:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: #0052cc;
+    box-shadow: 0 0 10px rgba(0, 82, 204, 0.3);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  button[type=submit] {
+    background-color: #0052cc;
+    color: white;
+    border: none;
+    font-weight: 700;
+    font-size: 1.25rem;
+    padding: 18px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 300px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 12px 36px rgba(0, 82, 204, 0.45);
+    transition: background-color 0.3s ease;
+    margin: 30px auto 0;
+    display: block;
+  }
+  button[type=submit]:hover {
+    background-color: #003d99;
+  }
+  .item-row {
+    margin-top: 20px;
+    border: 1px solid #dde6f0;
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+  }
+  .item-row h2 {
+    color: #42526e;
+    margin: 0 0 10px 0;
+  }
+  .remove-item {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #ff4d4d;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  .add-item {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .add-item button {
+    background-color: #e7f1ff;
+    color: #0052cc;
+    border: 1px solid #b3c0d1;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  .add-item button:hover {
+    background-color: #d0e4ff;
+    border-color: #0052cc;
+  }
+  @media (max-width: 600px) {
+    .form-row {
+      flex-direction: column;
+    }
+    .form-group {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* Estilo para tabela das OCs salvas */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  th, td {
+    border: 1.6px solid #dde6f0;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  th {
+    background-color: #e7f1ff;
+    color: #0052cc;
+  }
+  tr:nth-child(even) {
+    background-color: #f9fbff;
+  }
+</style>
+</head>
+<body>
+<button onclick="window.location.href='{{ url_for('controle') }}'" 
+        style="padding:5px 10px; width: 80px; font-size: 0.9rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+    ← Voltar
+</button>
+
+<h1>Ordem de Compra</h1>
+
+<!-- Controle das abas -->
+<div class="tabs" role="tablist">
+  <button id="tab-novo" class="tab active" role="tab" aria-selected="true" aria-controls="content-novo" tabindex="0">Nova Ordem</button>
+  <button id="tab-lista" class="tab" role="tab" aria-selected="false" aria-controls="content-lista" tabindex="-1">Ordens Salvas</button>
+</div>
+
+<!-- Conteúdo das abas -->
+<div id="content-novo" class="tab-content" role="tabpanel" aria-labelledby="tab-novo">
+  <form method="POST" action="{{ url_for('oc') }}" novalidate>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="rm_referencia">RM de Referência</label>
+        <input type="number" id="rm_referencia" name="rm_referencia" min="1" placeholder="Digite o número da RM para preencher dados automaticamente" />
+      </div>
+      <div class="form-group">
+        <label for="numero_oc">Nº da OC <span aria-label="required">*</span></label>
+        <input type="text" id="numero_oc" name="numero_oc" required />
+      </div>
+      <div class="form-group">
+        <label for="status_compra">Status de Compra <span aria-label="required">*</span></label>
+        <select id="status_compra" name="status_compra" required>
+          <option value="" disabled selected>Selecione</option>
+          <option>Em análise</option>
+          <option>Aprovada</option>
+          <option>Rejeitada</option>
+          <option>Em andamento</option>
+          <option>Concluída</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="data_solicitacao">Data da Solicitação <span aria-label="required">*</span></label>
+        <input type="date" id="data_solicitacao" name="data_solicitacao" required />
+      </div>
+      <div class="form-group">
+        <label for="implantacao_pedido">Implantação do Pedido</label>
+        <input type="text" id="implantacao_pedido" name="implantacao_pedido" />
+      </div>
+      <div class="form-group">
+        <label for="empresa">Empresa</label>
+        <select id="empresa" name="empresa">
+          <option value="">Selecione...</option>
+          <option value="3r Serv">3r Serv</option>
+          <option value="Multi Serv">Multi Serv</option>
+          <option value="Sad Serv">Sad Serv</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group full-width">
+        <label for="descricao_geral">Descrição Geral da OC</label>
+        <textarea id="descricao_geral" name="descricao_geral" placeholder="Descreva a ordem de compra..." required></textarea>
+      </div>
+    </div>
+
+    <!-- Itens da Ordem de Compra -->
+    <div class="item-row">
+      <h2>Item 1</h2>
+      <button type="button" class="remove-item" onclick="removerItem(this)">×</button>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="descricao1">Descrição do Item 1</label>
+          <textarea id="descricao1" name="descricao[]" required></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quantidade1">Quantidade</label>
+          <input type="number" id="quantidade1" name="quantidade[]" min="1" value="1" />
+        </div>
+        <div class="form-group">
+          <label for="preco_unitario1">Preço Unitário</label>
+          <input type="number" id="preco_unitario1" name="preco_unitario[]" step="0.01" min="0" value="0.00" />
+        </div>
+      </div>
+    </div>
+
+    <div class="add-item">
+      <button type="button" onclick="adicionarItem()">Adicionar Outro Item</button>
+    </div>
+
+    <!-- Campos complementares -->
+    <div class="form-row" style="margin-top: 30px;">
+      <div class="form-group">
+        <label for="categoria">Categoria</label>
+        <input type="text" id="categoria" name="categoria" />
+      </div>
+      <div class="form-group">
+        <label for="centro_custo">Centro de Custo</label>
+        <input type="text" id="centro_custo" name="centro_custo" />
+      </div>
+      <div class="form-group">
+        <label for="fornecedor">Fornecedor</label>
+        <input type="text" id="fornecedor" name="fornecedor" />
+      </div>
+      <div class="form-group">
+        <label for="previsao_entrega">Previsão de Entrega</label>
+        <input type="date" id="previsao_entrega" name="previsao_entrega" />
+      </div>
+      <div class="form-group">
+        <label for="local_entrega">Local da Entrega</label>
+        <input type="text" id="local_entrega" name="local_entrega" />
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top: 10px;">
+      <div class="form-group full-width">
+        <label for="obs">Observações</label>
+        <textarea id="obs" name="obs"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full-width">
+        <label for="condicoes_entrega">Condições de Entrega</label>
+        <textarea id="condicoes_entrega" name="condicoes_entrega"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="tipo_frete">Tipo de Frete</label>
+        <select id="tipo_frete" name="tipo_frete">
+          <option value="" disabled selected>Selecione</option>
+          <option>Normal</option>
+          <option>Expresso</option>
+          <option>Retirada</option>
+          <option>Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="data_entrega">Data da Entrega</label>
+        <input type="date" id="data_entrega" name="data_entrega" />
+      </div>
+    </div>
+    <div class="form-row" style="margin-top: 10px;">
+      <div class="form-group full-width">
+        <label for="obs_almoxarifado">Observações do Almoxarifado</label>
+        <textarea id="obs_almoxarifado" name="obs_almoxarifado"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="status_entrega">Status de Entrega</label>
+        <select id="status_entrega" name="status_entrega">
+          <option value="" disabled selected>Selecione</option>
+          <option>Pendente</option>
+          <option>Entregue</option>
+          <option>Atrasada</option>
+          <option>Cancelada</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="dias_atraso">Dias de Atraso</label>
+        <input type="number" id="dias_atraso" name="dias_atraso" min="0" />
+      </div>
+      <div class="form-group">
+        <label for="nf">NF</label>
+        <input type="text" id="nf" name="nf" />
+      </div>
+      <div class="form-group">
+        <label for="natureza_nf">Natureza da NF</label>
+        <input type="text" id="natureza_nf" name="natureza_nf" />
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:10px;">
+      <div class="form-group">
+        <label for="valor_inicial_proposta">Valor Inicial da Proposta</label>
+        <input type="number" id="valor_inicial_proposta" name="valor_inicial_proposta" step="0.01" min="0" />
+      </div>
+      <div class="form-group">
+        <label for="valor_final_proposta">Valor Final da Proposta</label>
+        <input type="number" id="valor_final_proposta" name="valor_final_proposta" step="0.01" min="0" />
+      </div>
+      <div class="form-group full-width">
+        <label for="link_nf">Link da NF</label>
+        <input type="url" id="link_nf" name="link_nf" />
+      </div>
+    </div>
+    <button type="submit">Salvar</button>
+  </form>
+</div>
+
+<div id="content-lista" class="tab-content" role="tabpanel" aria-labelledby="tab-lista" hidden>
+  <h2>Ordens de Compra Salvas</h2>
+  {% if ordens_de_compra %}
+  <table>
+    <thead>
+      <tr>
+        <th>Nº da OC</th>
+        <th>Material (Descrição Geral)</th>
+        <th>Quantidade</th>
+        <th>Centro de Custo</th>
+        <th>Previsão de Entrega</th>
+        <th>Local de Entrega</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for oc in ordens_de_compra %}
+      <tr>
+        <td>{{ oc.numero_oc }}</td>
+        <td>
+          {% if oc.itens and oc.itens|length > 0 %}
+            {{ oc.itens[0].material }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if oc.itens and oc.itens|length > 0 %}
+            {{ oc.itens[0].quantidade }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if oc.itens and oc.itens|length > 0 %}
+            {{ oc.itens[0].centro_custo }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if oc.itens and oc.itens|length > 0 %}
+            {{ oc.itens[0].previsao_entrega }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if oc.itens and oc.itens|length > 0 %}
+            {{ oc.itens[0].local_entrega }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p style="text-align: center;">Nenhuma Ordem de Compra cadastrada.</p>
+  {% endif %}
+</div>
+
+<script>
+  // Controle simples de abas
+  const tabNovo = document.getElementById("tab-novo");
+  const tabLista = document.getElementById("tab-lista");
+  const contentNovo = document.getElementById("content-novo");
+  const contentLista = document.getElementById("content-lista");
+
+  function ativarAba(abaAtiva, conteudoAtivo, abaInativa, conteudoInativo) {
+    abaAtiva.classList.add("active");
+    abaAtiva.setAttribute("aria-selected", "true");
+    abaAtiva.tabIndex = 0;
+    conteudoAtivo.hidden = false;
+
+    abaInativa.classList.remove("active");
+    abaInativa.setAttribute("aria-selected", "false");
+    abaInativa.tabIndex = -1;
+    conteudoInativo.hidden = true;
+  }
+
+  tabNovo.addEventListener("click", () => {
+    ativarAba(tabNovo, contentNovo, tabLista, contentLista);
+  });
+
+  tabLista.addEventListener("click", () => {
+    ativarAba(tabLista, contentLista, tabNovo, contentNovo);
+  });
+
+  // Inicialmente a aba 'Nova Ordem' está ativada
+  window.addEventListener('DOMContentLoaded', () => {
+    contentNovo.hidden = false;
+    contentLista.hidden = true;
+    tabNovo.classList.add('active');
+    tabNovo.setAttribute('aria-selected', 'true');
+    tabNovo.tabIndex = 0;
+    tabLista.classList.remove('active');
+    tabLista.setAttribute('aria-selected', 'false');
+    tabLista.tabIndex = -1;
+  });
+</script>
+
+</body>
+</html>

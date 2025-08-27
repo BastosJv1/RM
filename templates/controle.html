@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Solicitações</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9fafb;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 250px;
+      background-color: #1e3a8a;
+      color: white;
+      padding: 30px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      font-weight: 600;
+    }
+    #sidebar a {
+      color: white;
+      text-decoration: none;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: block;
+      transition: background-color 0.3s ease;
+    }
+    #sidebar a:hover,
+    #sidebar a.active {
+      background-color: #2563eb;
+    }
+    #main-content {
+      flex-grow: 1;
+      padding: 40px 50px;
+      background: white;
+      overflow-y: auto;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    button#voltar {
+      align-self: flex-start;
+      background: transparent;
+      color: #2563eb;
+      border: none;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      padding: 7px 14px;
+      border-radius: 8px;
+      transition: color 0.3s ease, background-color 0.3s ease;
+      user-select: none;
+      margin-bottom: 36px;
+      width: 80px;
+    }
+    button#voltar:hover {
+      background-color: #e0e7ff;
+      color: #1e40af;
+    }
+    button#voltar:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+    h1 {
+      font-weight: 700;
+      font-size: 2.75rem;
+      margin-top: 0;
+      margin-bottom: 40px;
+      color: #1e3a8a;
+      user-select: none;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+    .flash-message {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 32px;
+      border-radius: 20px;
+      font-weight: 700;
+      box-shadow: 0 6px 22px rgba(74, 222, 128, 0.9);
+      z-index: 11000;
+      user-select: none;
+      color: #065f46;
+      background-color: #4ade80;
+    }
+    /* Lista de cards */
+    #requestsList {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      max-height: 75vh;
+      user-select: none;
+    }
+    /* Card resumido */
+    .request-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 16px 24px;
+      transition: background-color 0.25s ease;
+    }
+    .request-card:hover {
+      background-color: #f0f4ff;
+    }
+    .request-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #1d4ed8;
+    }
+    .request-summary > div {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 8px;
+    }
+    /* Conteúdo detalhado escondido inicialmente */
+    .request-details {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #cbd5e1;
+      display: none;
+      font-weight: normal;
+      user-select: text;
+    }
+    /* Mostrar detalhes quando classe active */
+    .request-card.active .request-details {
+      display: block;
+    }
+    .request-details form {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .field {
+      flex: 1 1 250px;
+      display: flex;
+      flex-direction: column;
+    }
+    .field label {
+      font-weight: 600;
+      color: #42526e;
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      border-radius: 14px;
+      border: 2px solid #cbd5e1;
+      padding: 14px 18px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      color: #334155;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      box-sizing: border-box;
+      min-height: 44px;
+      resize: vertical;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+    select {
+      appearance: none;
+      cursor: pointer;
+      padding-right: 42px;
+      background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 22px 22px;
+    }
+    textarea {
+      min-height: 100px;
+    }
+    .items-list {
+      background: #f0f4ff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      max-height: 140px;
+      overflow-y: auto;
+      font-size: 1rem;
+      color: #334155;
+    }
+    .items-list p {
+      margin: 4px 0;
+      user-select: text;
+    }
+    .save-button-container {
+      display: flex;
+      justify-content: flex-end;
+    }
+    button[type="submit"] {
+      background-color: #2563eb;
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 700;
+      padding: 14px 36px;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(37, 99, 235, 0.8);
+      transition: background-color 0.3s ease;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    button[type="submit"]:hover {
+      background-color: #1e40af;
+    }
+    @media (max-width: 900px) {
+      #main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+      }
+      #sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        box-shadow: none;
+        padding: 16px 12px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+      }
+      #sidebar .menu-section {
+        margin-bottom: 8px;
+      }
+      #sidebar a {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+      .items-list {
+        max-height: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar" role="navigation" aria-label="Menu principal">
+    <nav>
+      <div class="menu-section">
+        <h3>Setor de Compras</h3>
+        <a href="{{ url_for('controle') }}" class="active"><span class="icon" aria-hidden="true">📅</span><span>Controle RM</span></a>
+        <a href="{{ url_for('pedidos_compras') }}"><span class="icon" aria-hidden="true">📋</span><span>Pedidos de Compras</span></a>
+        <a href="{{ url_for('oc') }}"><span class="icon" aria-hidden="true">🛒</span><span>OC</span></a>
+        <a href="{{ url_for('kanban') }}"><span class="icon" aria-hidden="true">📅</span><span>Timeline das RM's</span></a>
+        <a href="{{ url_for('busca_arquivos') }}"><span class="icon" aria-hidden="true">📂</span><span>Buscar Arquivos</span></a>
+      </div>
+      <div class="menu-section">
+        <h3>Almoxarifado</h3>
+        <div class="menu-section">
+          <a href="{{ url_for('acompanhamento_entregas') }}"><span class="icon" aria-hidden="true">📦</span><span>Entregas</span></a>
+        </div>
+      </div>
+      <div class="menu-section">
+        <h3>Frota</h3>
+        <div class="menu-section">
+          <a href="{{ url_for('frota_expedicao') }}"><span class="icon" aria-hidden="true">🚚</span><span>Expedição</span></a>
+        </div>
+      </div>
+    </nav>
+  </div>
+  <main id="main-content">
+    <button id="voltar" onclick="window.location.href='{{ url_for('login') }}'">← Voltar</button>
+    <h1>Controle das Solicitações</h1>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-message" role="alert">{{ messages[0] }}</div>
+    {% endif %}
+    {% endwith %}
+
+    <section id="requestsList" aria-live="polite">
+      {% for r in requisicoes %}
+      <article class="request-card" tabindex="0" aria-expanded="false" aria-controls="request-details-{{ r.id_req }}" aria-label="Requisição RM {{ r.id_req }} - {{ r.requisitante }}">
+        <div class="request-summary" onclick="toggleDetails(this)">
+          <div><strong>RM {{ r.id_req }}</strong> - {{ r.requisitante }}</div>
+          <div style="flex:1;">Itens: {{ r.itens|length }}</div>
+          <div style="color: #2563eb; font-weight: 700; cursor: pointer;">Detalhes ▸</div>
+        </div>
+        <div class="request-details" id="request-details-{{ r.id_req }}" hidden>
+          <form method="POST" action="{{ url_for('controle') }}">
+            <input type="hidden" name="rm" value="{{ r.id_req }}">
+            <div class="field-group">
+              <div class="field">
+                <label for="items-{{ r.id_req }}">Itens (Qtd x Descrição)</label>
+                <div class="items-list" id="items-{{ r.id_req }}">
+                  {% for item in r.itens %}
+                  <p>{{ item.quantidade }} x {{ item.descricao }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="field">
+                <label for="especificacoes-{{ r.id_req }}">Especificações Técnicas</label>
+                <textarea id="especificacoes-{{ r.id_req }}" name="especificacoes" rows="4" readonly>{{ r.itens|map(attribute='especificacoes')|join('\\n') }}</textarea>
+              </div>
+              <div class="field">
+                <label for="unidade_medida-{{ r.id_req }}">Unidade de Medida</label>
+                <textarea id="unidade_medida-{{ r.id_req }}" name="unidade_medida" rows="4" readonly>{{ r.itens|map(attribute='unidade_medida')|join('\\n') }}</textarea>
+              </div>
+              <div class="field">
+                <label for="centro_custo-{{ r.id_req }}">Centro de Custo</label>
+                <input type="text" id="centro_custo-{{ r.id_req }}" name="centro_custo" value="{{ r.centro_custo }}" aria-describedby="desc-centro_custo-{{ r.id_req }}" />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="field">
+                <label for="status_solicitacao-{{ r.id_req }}">Status da Solicitação</label>
+                <select id="status_solicitacao-{{ r.id_req }}" name="status_solicitacao" aria-describedby="desc-status-{{ r.id_req }}">
+                  {% for st in ["AGUARDANDO APROVAÇÃO","SOLICITAÇÃO APROVADA","SOLICITAÇÃO PARCIALMENTE AUTORIZADA","NÃO APROVADA","APENAS COTAÇÃO","COMPRA EFETUADA","EM EXPEDIÇÃO","PEDIDO ENTREGUE","PEDIDO DUPLICADO","PEDIDO CANCELADO"] %}
+                  <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>{{ st }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label for="comprador_responsavel-{{ r.id_req }}">Comprador Responsável</label>
+                <select id="comprador_responsavel-{{ r.id_req }}" name="comprador_responsavel" aria-describedby="desc-comprador-{{ r.id_req }}">
+                  {% for c in ["Karen","Bastos","Leandro"] %}
+                  <option value="{{ c }}" {% if r.comprador_responsavel == c %}selected{% endif %}>{{ c }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label for="obs_comprador-{{ r.id_req }}">Obs. Comprador</label>
+                <textarea id="obs_comprador-{{ r.id_req }}" name="obs_comprador" rows="3">{{ r.observacoes_comprador }}</textarea>
+              </div>
+              <div class="field">
+                <label for="obs_almoxarifado-{{ r.id_req }}">Obs. Almoxarifado</label>
+                <textarea id="obs_almoxarifado-{{ r.id_req }}" name="obs_almoxarifado" rows="3">{{ r.observacoes_almoxarifado }}</textarea>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="field">
+                <label for="data_conclusao-{{ r.id_req }}">Data de Conclusão</label>
+                <input type="date" id="data_conclusao-{{ r.id_req }}" name="data_conclusao" value="{{ r.data_conclusao }}" />
+              </div>
+              <div class="field">
+                <label for="numero_oc-{{ r.id_req }}">Número da OC</label>
+                <input type="text" id="numero_oc-{{ r.id_req }}" name="numero_oc" value="{{ r.numero_oc }}" />
+              </div>
+              <div class="field save-button-container">
+                <button type="submit" aria-label="Salvar alterações da RM {{ r.id_req }}">Salvar</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <script>
+    function toggleDetails(summaryDiv) {
+      const card = summaryDiv.parentElement;
+      const details = card.querySelector('.request-details');
+      const expanded = card.classList.toggle('active');
+      details.hidden = !expanded;
+      card.setAttribute('aria-expanded', expanded);
+    }
+
+    // Permite abrir/fechar com Enter/Space via teclado no artigo
+    document.querySelectorAll('.request-card').forEach(card => {
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const summary = card.querySelector('.request-summary');
+          if (summary) {
+            toggleDetails(summary);
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

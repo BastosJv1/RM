@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Expedição - Frota</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #fafafa;
+  }
+  h1 {
+    color: #2563eb;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  th, td {
+    padding: 12px 18px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+  }
+  th {
+    background-color: #e0e7ff;
+    color: #2563eb;
+  }
+  tr:hover {
+    background-color: #f0f4ff;
+  }
+</style>
+</head>
+<body>
+<button onclick="window.location.href='{{ url_for('controle') }}'" 
+        style="padding:10px 20px; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+    ← Voltar
+</button>
+
+<h1>RM's em Expedição - Frota</h1>
+{% if requisicoes %}
+<table aria-label="Lista de RMs em expedição">
+  <thead>
+    <tr>
+      <th>RM</th>
+      <th>Solicitante</th>
+      <th>Status</th>
+      <th>Itens (Qtd x Descrição)</th>
+      <th>Comprador Responsável</th>
+      <th>Data de Conclusão</th>
+      <th>Centro de Custo</th>
+      <th>Observações Almoxarifado</th>
+      <th>Número da OC</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in requisicoes %}
+    <tr>
+      <td>{{ r.id_req }}</td>
+      <td>{{ r.requisitante }}</td>
+      <td>{{ r.status }}</td>
+      <td>
+        {% for item in r.itens %}
+          {{ item.quantidade }} x {{ item.descricao }}<br/>
+        {% endfor %}
+      </td>
+      <td>{{ r.comprador_responsavel }}</td>
+      <td>{{ r.data_conclusao }}</td>
+      <td>{{ r.centro_custo }}</td>
+      <td>{{ r.observacoes_almoxarifado }}</td>
+      <td>{{ r.numero_oc }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="text-align:center;">Não há RMs em expedição no momento.</p>
+{% endif %}
+</body>
+</html>

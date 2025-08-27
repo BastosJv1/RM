@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pedidos de Compras - Formalizar Cotação</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9fafb;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100vh;
+      background-color: #1e3a8a;
+      color: white;
+      padding: 30px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      font-weight: 600;
+    }
+    #sidebar a {
+      color: white;
+      text-decoration: none;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: block;
+      transition: background-color 0.3s ease;
+    }
+    #sidebar a:hover,
+    #sidebar a.active {
+      background-color: #2563eb;
+    }
+    #main-content {
+      margin-left: 250px;
+      padding: 40px 50px;
+      background: white;
+      overflow-y: auto;
+      box-sizing: border-box;
+      flex-grow: 1;
+    }
+    h1 {
+      color: #1e3a8a;
+      font-weight: 700;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+    }
+    form {
+      background: #f3f4f6;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 40px;
+      max-width: 800px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      margin-top: 20px;
+      color: #374151;
+    }
+    input[type="text"], input[type="date"], select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1.8px solid #d1d5db;
+      font-size: 1rem;
+      font-family: inherit;
+      color: #334155;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 6px #2563ebaa;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    select[multiple] {
+      height: 100px;
+      cursor: pointer;
+    }
+    button {
+      margin-top: 30px;
+      background-color: #2563eb;
+      border: none;
+      color: white;
+      font-weight: 700;
+      padding: 15px 32px;
+      font-size: 1.15rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+    }
+    button:hover {
+      background-color: #1e40af;
+    }
+    ul {
+      padding-left: 20px;
+      color: #374151;
+    }
+    .flash-message {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 32px;
+      border-radius: 20px;
+      font-weight: 700;
+      box-shadow: 0 6px 22px rgba(74, 222, 128, 0.9);
+      z-index: 11000;
+      user-select: none;
+      transition: opacity 0.5s ease-in-out;
+    }
+    .flash-success {
+      background-color: #4ade80;
+      color: #065f46;
+    }
+    .flash-error {
+      background-color: #f87171;
+      color: #7f1d1d;
+      box-shadow: 0 6px 22px rgba(248, 113, 113, 0.8);
+    }
+    @media (max-width: 900px) {
+      #main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+      }
+      #sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        box-shadow: none;
+        padding: 16px 12px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+      }
+      #sidebar a {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="sidebar" role="navigation" aria-label="Menu principal">
+  <nav>
+    <div class="menu-section">
+      <h3>Setor de Compras</h3>
+      <a href="{{ url_for('controle') }}" class="{% if pagina_ativa == 'controle' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📅</span><span>Controle RM</span>
+      </a>
+      <a href="{{ url_for('pedidos_compras') }}" class="{% if pagina_ativa == 'pedidos_compras' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📋</span><span>Pedidos de Compras</span>
+      </a>
+      <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">🛒</span><span>OC</span>
+      </a>
+      <a href="{{ url_for('kanban') }}" class="{% if pagina_ativa == 'kanban' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📅</span><span>Timeline das RM's</span>
+      </a>
+      <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📂</span><span>Buscar Arquivos</span>
+      </a>
+    </div>
+    <div class="menu-section">
+      <h3>Almoxarifado</h3>
+      <a href="{{ url_for('acompanhamento_entregas') }}"><span class="icon" aria-hidden="true">📦</span><span>Entregas</span></a>
+    </div>
+    <div class="menu-section">
+      <h3>Frota</h3>
+      <a href="{{ url_for('frota_expedicao') }}"><span class="icon" aria-hidden="true">🚚</span><span>Expedição</span></a>
+    </div>
+  </nav>
+</div>
+<main id="main-content">
+  <h1>Pedidos de Compras - Formalizar Cotação</h1>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-message {% if category == 'error' %}flash-error{% else %}flash-success{% endif %}" role="alert" id="flash-message">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if rm_aprovadas %}
+    {% for r in rm_aprovadas %}
+      <form method="POST" aria-label="Formulário pedido de cotação RM {{ r.id_req }}">
+        <input type="hidden" name="rm_number" value="{{ r.id_req }}" />
+        <label>Requisição RM {{ r.id_req }} - {{ r.requisitante }}</label>
+        <label>Itens para cotação:</label>
+        <ul>
+          {% for item in r.itens %}
+            <li>{{ item.quantidade }} x {{ item.descricao }}</li>
+          {% endfor %}
+        </ul>
+        <label for="fornecedores_{{ r.id_req }}">Selecionar Fornecedor(s) <span aria-hidden="true" style="color:#dc2626;">*</span></label>
+        <select id="fornecedores_{{ r.id_req }}" name="fornecedores[]" multiple required aria-describedby="desc_fornecedores_{{ r.id_req }}">
+          {% for f in fornecedores %}
+            <option value="{{ f.email }}">{{ f.nome }} - {{ f.email }}</option>
+          {% endfor %}
+        </select>
+        <div id="desc_fornecedores_{{ r.id_req }}" style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+          Segure Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos fornecedores
+        </div>
+
+        <label for="prazo_entrega_{{ r.id_req }}">Prazo de Entrega Desejado <span aria-hidden="true" style="color:#dc2626;">*</span></label>
+        <input type="date" id="prazo_entrega_{{ r.id_req }}" name="prazo_entrega" required />
+
+        <label for="condicoes_{{ r.id_req }}">Condições Comerciais</label>
+        <textarea id="condicoes_{{ r.id_req }}" name="condicoes" placeholder="Descreva as condições comerciais..."></textarea>
+
+        <label for="observacoes_{{ r.id_req }}">Observações (opcional)</label>
+        <textarea id="observacoes_{{ r.id_req }}" name="observacoes" placeholder="Outras informações relevantes..."></textarea>
+
+        <button type="submit" aria-label="Enviar pedido de cotação para RM {{ r.id_req }}">Enviar Pedido de Cotação</button>
+      </form>
+    {% endfor %}
+  {% else %}
+    <p style="color:#6b7280; font-size:1.1rem; margin-top:40px;">Nenhuma Requisição com status "Solicitação Aprovada" para cotação no momento.</p>
+  {% endif %}
+
+  <section style="margin-top: 60px; max-width: 800px;">
+    <h2>Pedidos de Cotação Enviados</h2>
+    {% if pedidos_cotacao %}
+      <ul style="color:#374151; font-size: 1rem; line-height: 1.5rem;">
+        {% for p in pedidos_cotacao %}
+          <li>RM {{ p.rm_number }} enviada em {{ p.data_envio }} para {{ p.fornecedores | join(", ") }} - Prazo: {{ p.prazo_entrega }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="color:#6b7280;">Nenhum pedido de cotação enviado até o momento.</p>
+    {% endif %}
+  </section>
+</main>
+
+<script>
+  // Esconde a mensagem flash automaticamente após 4 segundos
+  window.onload = function() {
+    const flash = document.getElementById("flash-message");
+    if (flash) {
+      setTimeout(() => {
+        flash.style.opacity = '0';
+        setTimeout(() => flash.remove(), 600);
+      }, 4000);
+    }
+  };
+</script>
+</body>
+</html>

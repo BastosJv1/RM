@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Acompanhamento das Requisições</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    margin: 20px auto;
+    max-width: 1200px;
+    color: #1f2937;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-weight: 700;
+  }
+  .filter-container {
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  select {
+    padding: 8px 14px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1.5px solid #ccc;
+    min-width: 200px;
+  }
+  .kanban-board {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    padding-bottom: 20px;
+  }
+  .kanban-column {
+    flex: 1 1 250px;
+    max-width: 280px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+  }
+  .kanban-column h3 {
+    text-align: center;
+    margin-bottom: 12px;
+    color: #2563eb;
+  }
+  .kanban-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    margin-bottom: 12px;
+    padding: 14px 18px;
+    cursor: grab;
+    user-select: none;
+  }
+  .kanban-card.dragging {
+    opacity: 0.6;
+    cursor: grabbing;
+  }
+  .rm-id {
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+  }
+  .descricao {
+    margin-bottom: 8px;
+    color: #374151;
+    font-weight: 600;
+  }
+  .info-line {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #4b5563;
+  }
+  .responsavel {
+    font-weight: 700;
+    color: #2563eb;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+<button onclick="window.history.back()" style="
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+  transition: background-color 0.3s ease;
+  z-index: 1000;
+">← Voltar</button>
+
+<script>
+  const btn = document.querySelector('button[onclick="window.history.back()"]');
+  btn.addEventListener('mouseover', () => btn.style.backgroundColor = '#1e40af');
+  btn.addEventListener('mouseout', () => btn.style.backgroundColor = '#2563eb');
+</script>
+
+
+<h1>Acompanhamento das Requisições</h1>
+
+<div class="filter-container">
+  <label for="func-filter">Filtrar por Comprador Responsável:</label>
+  <select id="func-filter">
+    <option value="todos" selected>Todos</option>
+    {% set compradores = ["Karen", "Bastos", "Leandro"] %}
+    {% for c in compradores %}
+      <option value="{{ c }}">{{ c }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="kanban-board" id="kanban-board">
+  {% for status, lista in requisicoes_por_status.items() %}
+    <div class="kanban-column" data-status="{{ status }}">
+      <h3>{{ status }}</h3>
+      {% if lista %}
+        {% for r in lista %}
+        <div class="kanban-card" draggable="true" data-comprador="{{ r.comprador_responsavel or '' }}" title="Solicitante: {{ r.requisitante }}">
+          <div class="rm-id">RM: {{ r.id_req }}</div>
+          <div class="descricao">
+            {% for item in r.itens %}
+              {{ item.descricao }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </div>
+          <div class="info-line"><strong>Solicitante:</strong> {{ r.requisitante }}</div>
+          <div class="info-line"><strong>Comentários:</strong> {{ r.observacoes_comprador or 'Nenhum' }}</div>
+          <div class="responsavel">
+            Comprador Responsável: 
+            {{ r.comprador_responsavel or "Nenhum" }}
+            {% if r.comprador_responsavel %}
+              {% set nome_lower = r.comprador_responsavel.lower() %}
+              {% if nome_lower in ['karen'] %}
+                &#x1F469;  <!-- emoji mulher -->
+              {% elif nome_lower in ['bastos', 'leandro'] %}
+                &#x1F468;  <!-- emoji homem -->
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-card">Sem requisições neste status</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  document.querySelectorAll(".kanban-column").forEach(column => {
+    new Sortable(column, {
+      group: 'kanban',
+      animation: 150,
+      onEnd: function (evt) {
+        let novoStatus = evt.to.getAttribute('data-status');
+        let rmId = evt.item.querySelector('.rm-id').textContent.replace('RM: ','');
+        fetch('/atualizar_status', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({rm: rmId, status: novoStatus})
+        });
+      }
+    });
+  });
+
+  const filterSelect = document.getElementById('func-filter');
+  filterSelect.addEventListener('change', function() {
+    const compradorSelecionado = this.value.toLowerCase();
+    document.querySelectorAll('.kanban-card').forEach(card => {
+      const compradorCard = (card.getAttribute('data-comprador')||"").toLowerCase();
+      card.style.display = (compradorSelecionado === 'todos' || compradorCard === compradorSelecionado) ? '' : 'none';
+    });
+  });
+</script>
+
+</body>
+</html>

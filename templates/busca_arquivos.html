@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <title>RID - Rastreabilidade Inteligente de Documentos - Setor de Compras 3r Serv</title>
+    <style>
+        /* Mantenha seu CSS original do ServidorBuscaArquivos.py aqui */
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Rubik', sans-serif;
+            background: linear-gradient(135deg, #e8f0f7 0%, #f9fbfd 100%);
+            color: #3a3a3a;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #ffffffcc;
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-bottom: 1px solid #dce3e8;
+            backdrop-filter: saturate(180%) blur(12px);
+        }
+
+        header h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 2.25rem;
+            letter-spacing: 0.1em;
+            color: #404750;
+            text-transform: uppercase;
+        }
+
+        header h2 {
+            margin: 0.3rem 0 0;
+            font-weight: 400;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: #6c757d;
+        }
+
+        main {
+            flex: 1;
+            max-width: 850px;
+            margin: 3rem auto 3rem;
+            background: #ffffffdd;
+            border-radius: 14px;
+            padding: 2rem 3rem;
+            box-shadow: 0 12px 20px rgba(0,0,0,0.07);
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 1.15rem;
+            color: #495057;
+            display: block;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            user-select: none;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            border: 1.6px solid #ced4da;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            color: #4a4a4a;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #6f85a3;
+            background-color: #fff;
+            box-shadow: 0 0 12px rgba(111,133,163,0.3);
+            color: #2e3c59;
+            font-weight: 600;
+        }
+
+        button {
+            margin-top: 2rem;
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            font-size: 1.18rem;
+            font-weight: 600;
+            border-radius: 12px;
+            border: none;
+            color: #f9fafa;
+            background: linear-gradient(135deg, #4a75a3 0%, #36557a 100%);
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(54,85,122,0.75);
+            transition: background 0.4s ease, box-shadow 0.4s ease;
+            user-select: none;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #36557a 0%, #4a75a3 100%);
+            box-shadow: 0 6px 22px rgba(54,85,122,0.9);
+        }
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(54,85,122,0.55);
+        }
+
+        #resultado {
+            margin-top: 3rem;
+            color: #495057;
+        }
+        #resultado p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-left: 5px solid #4a75a3;
+            padding-left: 10px;
+            margin-bottom: 1.2rem;
+        }
+        ul {
+            list-style: none;
+            padding-left: 0;
+            max-height: 420px;
+            overflow-y: auto;
+            background: #f0f2f5;
+            border-radius: 12px;
+            box-shadow: inset 0 0 10px #d5dce3;
+            backdrop-filter: none;
+            margin: 0;
+        }
+        li {
+            padding: 14px 18px;
+            border-bottom: 1px solid #dce3e8;
+            font-size: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: #495057;
+            word-break: break-word;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+
+        .selo-exato {
+            background-color: #3a9764;
+            color: white;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            align-self: flex-start;
+            text-transform: uppercase;
+            user-select: none;
+            white-space: nowrap;
+            box-shadow: 0 0 6px rgba(58, 151, 100, 0.85);
+            margin-bottom: 8px;
+        }
+        .selo-proximo {
+            background-color: #f4bc1f;
+            color: #4a4a4a;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            align-self: flex-start;
+            text-transform: uppercase;
+            user-select: none;
+            white-space: nowrap;
+            box-shadow: 0 0 6px rgba(244, 188, 31, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .tipo-arquivo {
+            font-weight: 700;
+            font-size: 0.85em;
+            color: #74828f;
+        }
+        .caminho-arquivo {
+            font-size: 0.82em;
+            color: #8893a3;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .preview-texto {
+            font-size: 0.9em;
+            color: #606f7b;
+            font-style: italic;
+            white-space: normal;
+            user-select: text;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                padding: 1.5rem 1.5rem;
+                margin: 1.5rem auto 2rem;
+            }
+            button {
+                font-size: 1.1rem;
+                padding: 14px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button onclick="window.location.href='{{ url_for('controle') }}'" 
+        style="padding:4px 8px; width:90px; font-size:0.85rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+    ← Voltar
+</button>
+
+        <h1>Setor de Compras 3r Serv</h1>
+        <h2>RID - Rastreabilidade Inteligente de Documentos</h2>
+    </header>
+    
+    <main>
+        <label for="inputNome">Digite nome ou parte do nome do documento:</label>
+        <input type="text" id="inputNome" placeholder="Ex.: Contrato, Silva, 2023..." autofocus />
+        <button onclick="enviarBusca()">Buscar</button>
+
+        <div id="resultado"></div>
+    </main>
+
+    <script>
+        async function enviarBusca() {
+            const nome = document.getElementById('inputNome').value.trim();
+            const resultadoDiv = document.getElementById('resultado');
+
+            if (!nome) {
+                alert('Por favor, digite um nome para buscar.');
+                return;
+            }
+
+            resultadoDiv.innerHTML = '<p>Buscando...</p>';
+
+            try {
+                const response = await fetch('/buscar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome }),
+                });
+                const data = await response.json();
+
+                if (data.quantidade === 0) {
+                    resultadoDiv.innerHTML = '<p>Nenhum arquivo encontrado.</p>';
+                    return;
+                }
+
+                resultadoDiv.innerHTML = `<p><strong>Categoria detectada:</strong> ${data.categoria}</p>
+                    <p>Foram encontrados <strong>${data.quantidade}</strong> arquivo(s):</p>`;
+
+                const lista = document.createElement('ul');
+
+                data.resultados.forEach(r => {
+                    const li = document.createElement('li');
+
+                    const selo = document.createElement('span');
+                    selo.className = r.exato ? 'selo-exato' : 'selo-proximo';
+                    selo.textContent = r.exato ? 'EXATO' : 'PRÓXIMO';
+                    li.appendChild(selo);
+
+                    const nomeArquivo = document.createElement('strong');
+                    nomeArquivo.textContent = r.nome;
+                    li.appendChild(nomeArquivo);
+
+                    const tipoArquivo = document.createElement('span');
+                    tipoArquivo.className = 'tipo-arquivo';
+                    tipoArquivo.textContent = `Tipo: ${r.tipo}`;
+                    li.appendChild(tipoArquivo);
+
+                    const caminhoArquivo = document.createElement('div');
+                    caminhoArquivo.className = 'caminho-arquivo';
+                    caminhoArquivo.textContent = r.caminho;
+                    li.appendChild(caminhoArquivo);
+
+                    const previewTexto = document.createElement('p');
+                    previewTexto.className = 'preview-texto';
+                    previewTexto.textContent = r.preview;
+                    li.appendChild(previewTexto);
+
+                    lista.appendChild(li);
+                });
+
+                resultadoDiv.appendChild(lista);
+            } catch (e) {
+                resultadoDiv.innerHTML = `<p style="color: red;">Erro ao buscar: ${e.message}</p>`;
+            }
+        }
+
+        document.getElementById('inputNome').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                enviarBusca();
+            }
+        });
+    </script>
+</body>
+</html>
