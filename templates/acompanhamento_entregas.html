@@ -84,12 +84,38 @@
       <td>{{ item.centro_custo }}</td>
       <td>{{ item.previsao_entrega }}</td>
       <td>{{ item.local_entrega }}</td>
+      <td>
+        {{ item.numero_oc }}
+        {% if item.numero_oc %}
+        <button onclick="darBaixa('{{ item.numero_oc }}')" 
+                style="margin-left:5px; padding:2px 6px; font-size:0.8rem; background-color:#2563eb; color:white; border:none; border-radius:4px; cursor:pointer;">
+          Dar Baixa
+        </button>
+        {% endif %}
+      </td>
     </tr>
     {% else %}
     <tr><td colspan="6" style="text-align:center;">Nenhuma previsão de entrega cadastrada.</td></tr>
     {% endfor %}
   </tbody>
 </table>
-
+<script>
+function darBaixa(numero_oc){
+    fetch(`/almoxarifado/entregas/baixa/${numero_oc}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success){
+            alert("Entrega baixada com sucesso!");
+            location.reload();
+        } else {
+            alert("Erro ao dar baixa: " + (data.error || ''));
+        }
+    })
+    .catch(err => alert("Erro ao dar baixa: " + err));
+}
+</script>
 </body>
 </html>

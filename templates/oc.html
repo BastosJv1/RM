@@ -204,17 +204,25 @@
 </style>
 </head>
 <body>
-<button onclick="window.location.href='{{ url_for('controle') }}'" 
-        style="padding:5px 10px; width: 80px; font-size: 0.9rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
-    ← Voltar
-</button>
+<!-- Container dos botões -->
+<div style="display:flex; justify-content: space-between; margin-bottom: 20px;">
+  <button onclick="window.location.href='{{ url_for('controle') }}'" 
+          style="padding:5px 10px; font-size:0.9rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+      ← Voltar
+  </button>
 
-<h1>Ordem de Compra</h1>
+  <button onclick="window.location.href='{{ url_for('lista_ocs') }}'" 
+          style="padding:5px 10px; font-size:0.9rem; background-color:#10b981; color:white; border:none; border-radius:6px; cursor:pointer;">
+      Detalhamento de OC's
+  </button>
+</div>
+
+<!-- Título centralizado abaixo dos botões -->
+<h1 style="text-align:center; margin-bottom:36px;">Ordem de Compra</h1>
 
 <!-- Controle das abas -->
 <div class="tabs" role="tablist">
   <button id="tab-novo" class="tab active" role="tab" aria-selected="true" aria-controls="content-novo" tabindex="0">Nova Ordem</button>
-  <button id="tab-lista" class="tab" role="tab" aria-selected="false" aria-controls="content-lista" tabindex="-1">Ordens Salvas</button>
 </div>
 
 <!-- Conteúdo das abas -->
@@ -227,28 +235,13 @@
       </div>
       <div class="form-group">
         <label for="numero_oc">Nº da OC <span aria-label="required">*</span></label>
-        <input type="text" id="numero_oc" name="numero_oc" required />
-      </div>
-      <div class="form-group">
-        <label for="status_compra">Status de Compra <span aria-label="required">*</span></label>
-        <select id="status_compra" name="status_compra" required>
-          <option value="" disabled selected>Selecione</option>
-          <option>Em análise</option>
-          <option>Aprovada</option>
-          <option>Rejeitada</option>
-          <option>Em andamento</option>
-          <option>Concluída</option>
-        </select>
+        <input type="text" id="numero_oc" name="numero_oc" value="{{ numero_oc }}" readonly />
       </div>
       <div class="form-group">
         <label for="data_solicitacao">Data da Solicitação <span aria-label="required">*</span></label>
         <input type="date" id="data_solicitacao" name="data_solicitacao" required />
       </div>
-      <div class="form-group">
-        <label for="implantacao_pedido">Implantação do Pedido</label>
-        <input type="text" id="implantacao_pedido" name="implantacao_pedido" />
-      </div>
-      <div class="form-group">
+      <div class="form-group">  
         <label for="empresa">Empresa</label>
         <select id="empresa" name="empresa">
           <option value="">Selecione...</option>
@@ -283,7 +276,7 @@
         </div>
         <div class="form-group">
           <label for="preco_unitario1">Preço Unitário</label>
-          <input type="number" id="preco_unitario1" name="preco_unitario[]" step="0.01" min="0" value="0.00" />
+          <input type="text" id="preco_unitario1" name="preco_unitario[]" value="R$ 0,00" oninput="formatarMoeda(this)" />
         </div>
       </div>
     </div>
@@ -339,10 +332,6 @@
           <option>Outros</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="data_entrega">Data da Entrega</label>
-        <input type="date" id="data_entrega" name="data_entrega" />
-      </div>
     </div>
     <div class="form-row" style="margin-top: 10px;">
       <div class="form-group full-width">
@@ -362,10 +351,6 @@
         </select>
       </div>
       <div class="form-group">
-        <label for="dias_atraso">Dias de Atraso</label>
-        <input type="number" id="dias_atraso" name="dias_atraso" min="0" />
-      </div>
-      <div class="form-group">
         <label for="nf">NF</label>
         <input type="text" id="nf" name="nf" />
       </div>
@@ -375,85 +360,67 @@
       </div>
     </div>
     <div class="form-row" style="margin-top:10px;">
-      <div class="form-group">
-        <label for="valor_inicial_proposta">Valor Inicial da Proposta</label>
-        <input type="number" id="valor_inicial_proposta" name="valor_inicial_proposta" step="0.01" min="0" />
-      </div>
-      <div class="form-group">
-        <label for="valor_final_proposta">Valor Final da Proposta</label>
-        <input type="number" id="valor_final_proposta" name="valor_final_proposta" step="0.01" min="0" />
-      </div>
-      <div class="form-group full-width">
-        <label for="link_nf">Link da NF</label>
-        <input type="url" id="link_nf" name="link_nf" />
-      </div>
-    </div>
-    <button type="submit">Salvar</button>
-  </form>
+  <div class="form-group">
+    <label for="valor_inicial_proposta">Valor Inicial da Proposta</label>
+    <input type="text" id="valor_inicial_proposta" name="valor_inicial_proposta" oninput="formatarMoeda(this)" />
+  </div>
+  <div class="form-group">
+    <label for="valor_final_proposta">Valor Final da Proposta</label>
+    <input type="text" id="valor_final_proposta" name="valor_final_proposta" oninput="formatarMoeda(this)" />
+  </div>
+  <div class="form-group full-width">
+    <label for="arquivo_nf">Anexar NF</label>
+    <input type="file" id="arquivo_nf" name="arquivo_nf" accept="application/pdf" />
+  </div>
 </div>
 
-<div id="content-lista" class="tab-content" role="tabpanel" aria-labelledby="tab-lista" hidden>
-  <h2>Ordens de Compra Salvas</h2>
-  {% if ordens_de_compra %}
-  <table>
-    <thead>
-      <tr>
-        <th>Nº da OC</th>
-        <th>Material (Descrição Geral)</th>
-        <th>Quantidade</th>
-        <th>Centro de Custo</th>
-        <th>Previsão de Entrega</th>
-        <th>Local de Entrega</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for oc in ordens_de_compra %}
-      <tr>
-        <td>{{ oc.numero_oc }}</td>
-        <td>
-          {% if oc.itens and oc.itens|length > 0 %}
-            {{ oc.itens[0].material }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-        <td>
-          {% if oc.itens and oc.itens|length > 0 %}
-            {{ oc.itens[0].quantidade }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-        <td>
-          {% if oc.itens and oc.itens|length > 0 %}
-            {{ oc.itens[0].centro_custo }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-        <td>
-          {% if oc.itens and oc.itens|length > 0 %}
-            {{ oc.itens[0].previsao_entrega }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-        <td>
-          {% if oc.itens and oc.itens|length > 0 %}
-            {{ oc.itens[0].local_entrega }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <p style="text-align: center;">Nenhuma Ordem de Compra cadastrada.</p>
-  {% endif %}
+<div class="form-row">
+  <button type="submit">Salvar</button>
 </div>
 
+<script>
+  function formatarMoeda(input) {
+    let valor = input.value.replace(/\D/g, '');
+    valor = (valor / 100).toFixed(2) + '';
+    valor = valor.replace('.', ',');
+    valor = valor.replace(/(\d)(?=(\d{3})+\,)/g, '$1.');
+    input.value = 'R$ ' + valor;
+  }
+
+  // Função para adicionar novo item mantendo o formato moeda
+  function adicionarItem() {
+    const container = document.querySelector(".add-item");
+    const itemCount = document.querySelectorAll(".item-row").length + 1;
+    const newItem = document.createElement("div");
+    newItem.classList.add("item-row");
+    newItem.innerHTML = `
+      <h2>Item ${itemCount}</h2>
+      <button type="button" class="remove-item" onclick="removerItem(this)">×</button>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="descricao${itemCount}">Descrição do Item ${itemCount}</label>
+          <textarea id="descricao${itemCount}" name="descricao[]" required></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quantidade${itemCount}">Quantidade</label>
+          <input type="number" id="quantidade${itemCount}" name="quantidade[]" min="1" value="1" />
+        </div>
+        <div class="form-group">
+          <label for="preco_unitario${itemCount}">Preço Unitário</label>
+          <input type="text" id="preco_unitario${itemCount}" name="preco_unitario[]" value="R$ 0,00" oninput="formatarMoeda(this)" />
+        </div>
+      </div>
+    `;
+    container.insertAdjacentElement('beforebegin', newItem);
+  }
+
+  function removerItem(btn) {
+    const itemRow = btn.closest(".item-row");
+    if (itemRow) itemRow.remove();
+  }
+</script> 
 <script>
   // Controle simples de abas
   const tabNovo = document.getElementById("tab-novo");

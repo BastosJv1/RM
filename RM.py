@@ -9,6 +9,11 @@ import docx
 import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image, ImageFilter, ImageOps
+import random
+from flask import send_file
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import io
 
 
 app = Flask(__name__)
@@ -277,7 +282,6 @@ funcionarios = [
 
 requisicoes = []
 
-
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -318,6 +322,7 @@ def novo_pedido():
             return redirect(url_for("novo_pedido"))
 
         requisitante = request.form.get("requisitante")
+        centro_custo = request.form.get("centro_custo", "")
         descricoes = request.form.getlist("descricao[]")
         especificacoes = request.form.getlist("especificacoes[]")
         unidade_medida = request.form.getlist("unidade_medida[]")
@@ -342,6 +347,7 @@ def novo_pedido():
             itens.append(item)
 
         nova_req = Requisicao(id_req, requisitante, itens)
+        nova_req.centro_custo = centro_custo  # adicionando o centro de custo
         requisicoes.append(nova_req)
 
         flash(f"Requisição RM {id_req} enviada com sucesso ao setor de compras.")
@@ -470,43 +476,108 @@ def oc():
         return redirect(url_for("login"))
 
     if request.method == "POST":
+        numero_oc = request.form.get("numero_oc")  # vem oculto do form
+        data_solicitacao = request.form.get("data_solicitacao")
+        descricao_geral = request.form.get("descricao_geral")
         dados = request.form.to_dict(flat=False)
-
         descricoes = dados.get('descricao[]', [])
         quantidades = dados.get('quantidade[]', [])
-        centros_custo = dados.get('centro_custo', [''])[0]
-        previsoes = dados.get('previsao_entrega', [''])[0]
-        locais_entrega = dados.get('local_entrega', [''])[0]
-        descricao_geral = dados.get('descricao_geral', [''])[0]
+        precos_unitarios = dados.get('preco_unitario[]', [])
 
-        itens = []
         for i in range(len(descricoes)):
+            preco_str = precos_unitarios[i] if i < len(precos_unitarios) else "R$ 0,00"
+            preco_num = 0.0
+            try:
+                preco_num = float(preco_str.replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except:
+                pass
+
             item = {
-                'material': descricao_geral,  # Campo 'material' está com a Descrição Geral da OC
-                'quantidade': quantidades[i] if i < len(quantidades) else '',
-                'centro_custo': centros_custo,
-                'previsao_entrega': previsoes,
-                'local_entrega': locais_entrega,
+                "numero_oc": numero_oc,
+                "descricao": descricoes[i],
+                "quantidade": quantidades[i] if i < len(quantidades) else "",
+                "preco_unitario": preco_num,
+                "data_solicitacao": data_solicitacao,
+                "descricao_geral": descricao_geral,
+                "categoria": dados.get("categoria", [""])[0],
+                "centro_custo": dados.get("centro_custo", [""])[0],
+                "fornecedor": dados.get("fornecedor", [""])[0],
+                "previsao_entrega": dados.get("previsao_entrega", [""])[0],
+                "local_entrega": dados.get("local_entrega", [""])[0],
+                "baixa": False,  # Baixa do Almoxarifado.
+                "obs": dados.get("obs", [""])[0],
+                "condicoes_entrega": dados.get("condicoes_entrega", [""])[0],
+                "tipo_frete": dados.get("tipo_frete", [""])[0],
+                "obs_almoxarifado": dados.get("obs_almoxarifado", [""])[0],
+                "status_entrega": dados.get("status_entrega", [""])[0],
+                "nf": dados.get("nf", [""])[0],
+                "natureza_nf": dados.get("natureza_nf", [""])[0],
+                "valor_inicial_proposta": parse_moeda(dados.get("valor_inicial_proposta", [""])[0]),
+                "valor_final_proposta": parse_moeda(dados.get("valor_final_proposta", [""])[0]),
+                "link_nf": dados.get("link_nf", [""])[0]
             }
-            itens.append(item)
 
-        oc_data = {
-            'numero_oc': dados.get('numero_oc', [''])[0],
-            'itens': itens
-        }
+            ordens_de_compra.append(item)
 
-        # Atualiza ou adiciona ordem de compra na lista
-        for idx, oc in enumerate(ordens_de_compra):
-            if oc['numero_oc'] == oc_data['numero_oc']:
-                ordens_de_compra[idx] = oc_data
-                break
-        else:
-            ordens_de_compra.append(oc_data)
-
-        flash("Ordem de Compra salva com sucesso.")
+        flash(f"Ordem de Compra {numero_oc} criada com {len(descricoes)} itens.")
         return redirect(url_for("oc"))
 
-    return render_template("oc.html", ordens_de_compra=ordens_de_compra)
+    # Gera número novo toda vez que abre o form
+    numero_oc = gerar_numero_oc()
+    return render_template("oc.html", numero_oc=numero_oc, ordens_de_compra=ordens_de_compra)
+
+# Página Lista das OC's
+@app.route("/ocs")
+def lista_ocs():
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+    # Ordena as OCs pelo número
+    ordens_ordenadas = sorted(ordens_de_compra, key=lambda x: x['numero_oc'])
+    return render_template("lista_ocs.html", ordens_de_compra=ordens_ordenadas)
+
+def gerar_numero_oc():
+    ano = datetime.now().year
+    prefixo = f"OC-{ano}-"
+    # Extrai números já existentes, remove prefixo e pega número sequencial máximo
+    numeros_existentes = [
+        int(oc['numero_oc'].replace(prefixo, ''))
+        for oc in ordens_de_compra
+        if oc['numero_oc'].startswith(prefixo) and oc['numero_oc'].replace(prefixo, '').isdigit()
+    ]
+    proximo_numero = max(numeros_existentes) + 1 if numeros_existentes else 1
+    return prefixo + str(proximo_numero).zfill(4)
+
+def parse_moeda(valor_str):
+    if not valor_str:
+        return 0.0
+    try:
+        return float(valor_str.replace("R$", "").replace(".", "").replace(",", ".").strip())
+    except:
+        return 0.0
+
+# Editar a Lista de OC's se necessário.
+@app.route("/update_oc", methods=["POST"])
+def update_oc():
+    if not session.get("logado"):
+        return jsonify({"error":"não autorizado"}), 401
+
+    data = request.get_json()
+    numero_oc = data.get("numero_oc")
+    field = data.get("field")
+    value = data.get("value")
+
+    oc = next((o for o in ordens_de_compra if o['numero_oc'] == numero_oc), None)
+    if not oc:
+        return jsonify({"success": False, "error":"OC não encontrada"})
+
+    # Atualiza o campo
+    if field in oc:
+        oc[field] = value
+        return jsonify({"success": True})
+
+    return jsonify({"success": False, "error":"Campo inválido"})
+
 
 @app.route("/almoxarifado/entregas")
 def acompanhamento_entregas():
@@ -518,14 +589,27 @@ def acompanhamento_entregas():
     alerta_vencido = False
     alerta_proximo = False
 
+    # Cria um dicionário para localizar RM pela OC, se existir
+    rm_por_oc = {r.numero_oc: r for r in requisicoes if r.numero_oc}
+
+    # 1️⃣ Itens das OCs
     for oc in ordens_de_compra:
         numero_oc = oc.get('numero_oc', '')
-        for item in oc.get('itens', []):
-            data_texto = item.get('previsao_entrega', '')
-            data_formatada = data_texto
+        previsao = oc.get('previsao_entrega', '').strip()
+        
+        # Pula OC se já recebeu baixa
+        if oc.get('baixa', False):
+            continue
+
+        if previsao:
+            rm_relacionada = rm_por_oc.get(numero_oc)
+            if rm_relacionada and rm_relacionada.data_conclusao:
+                continue
+
+            data_formatada = previsao
             alerta_item = None
             try:
-                data_obj = datetime.strptime(data_texto, '%Y-%m-%d').date()
+                data_obj = datetime.strptime(previsao, '%Y-%m-%d').date()
                 data_formatada = data_obj.strftime('%d/%m/%Y')
                 dias_para_entrega = (data_obj - hoje).days
                 if dias_para_entrega < 0:
@@ -539,11 +623,11 @@ def acompanhamento_entregas():
 
             itens_para_exibir.append({
                 'numero_oc': numero_oc,
-                'material': item.get('material', ''),
-                'quantidade': item.get('quantidade', ''),
-                'centro_custo': item.get('centro_custo', ''),
+                'material': oc.get('descricao', ''),
+                'quantidade': oc.get('quantidade', ''),
+                'centro_custo': oc.get('centro_custo', ''),
                 'previsao_entrega': data_formatada,
-                'local_entrega': item.get('local_entrega', ''),
+                'local_entrega': oc.get('local_entrega', ''),
                 'alerta': alerta_item
             })
 
@@ -554,6 +638,20 @@ def acompanhamento_entregas():
         alertas.append("Há entregas próximas do vencimento (até 3 dias).")
 
     return render_template("acompanhamento_entregas.html", itens=itens_para_exibir, alertas=alertas)
+
+# Baixa na Entrega do Almoxarifado.
+@app.route("/almoxarifado/entregas/baixa/<numero_oc>", methods=["POST"])
+def dar_baixa_entrega(numero_oc):
+    if not session.get("logado"):
+        return jsonify({"error": "não autorizado"}), 401
+
+    # Marca como baixa todos os itens da OC
+    for oc in ordens_de_compra:
+        if oc.get('numero_oc', '') == numero_oc and not oc.get('baixa', False):
+            oc['baixa'] = True  # marca como entregue
+
+    return jsonify({"success": True})
+
 
 @app.route("/frota/expedicao")
 def frota_expedicao():
@@ -571,12 +669,59 @@ from email.message import EmailMessage
 
 # Lista simulada de fornecedores
 fornecedores = [
-    {"nome": "Fornecedor A", "email": "fornecedorA@exemplo.com"},
-    {"nome": "Fornecedor B", "email": "fornecedorB@exemplo.com"},
-    {"nome": "Fornecedor C", "email": "fornecedorC@exemplo.com"},
+    {"nome": "Fornecedor A", "email": "fornecedorA@email.com"},
+    {"nome": "Fornecedor B", "email": "fornecedorB@email.com"}
 ]
 
-pedidos_cotacao = []  # lista em memória dos pedidos de cotação enviados
+# Rota para cadastrar fornecedores
+@app.route("/fornecedores", methods=["GET", "POST"])
+def fornecedores_view():
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+    return render_template(
+        "fornecedores.html",
+        fornecedores=fornecedores,
+        pagina_ativa="fornecedores"
+    )
+
+fornecedores = []        # sua lista de fornecedores
+pedidos_cotacao = []     # lista de pedidos de cotação enviados
+rm_aprovadas = []        # lista de RMs aprovadas (se você já usa)
+
+# Adicionar fornecedor
+@app.route("/adicionar_fornecedor", methods=["POST"])
+def adicionar_fornecedor():
+    nome = request.form["nome"]
+    email = request.form["email"]
+    
+    # Adiciona ao seu "banco" (ou lista)
+    fornecedores.append({"nome": nome, "email": email})
+    
+    # Mensagem de sucesso
+    flash("Fornecedor adicionado com sucesso!", "success")
+    
+    # Redireciona de volta para a página de onde veio (pedidos_compras)
+    return redirect(request.referrer or url_for("pedidos_compras"))
+
+# Excluir fornecedor mantendo na mesma página
+@app.route("/fornecedores/excluir/<email>", methods=["POST"])
+def excluir_fornecedor(email):
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+    global fornecedores
+    fornecedores = [f for f in fornecedores if f["email"] != email]
+
+    flash("Fornecedor removido com sucesso!", "success")
+    # Redireciona de volta para a página de onde veio o POST
+    return redirect(request.referrer or url_for("pedidos_compras"))
+
+
+from flask import send_file
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import io
 
 @app.route("/pedidos_compras", methods=["GET", "POST"])
 def pedidos_compras():
@@ -597,87 +742,60 @@ def pedidos_compras():
             flash("Requisição RM não encontrada.", "error")
             return redirect(url_for("pedidos_compras"))
 
-        pedido = {
-            "rm_number": rm_number,
-            "fornecedores": fornecedores_emails,
-            "prazo_entrega": prazo_entrega,
-            "condicoes": condicoes,
-            "observacoes": observacoes,
-            "itens": [{"descricao": item.descricao, "quantidade": item.quantidade} for item in rm_obj.itens],
-            "data_envio": datetime.now().strftime("%d/%m/%Y %H:%M")
-        }
+        # Cria PDF em memória
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        largura, altura = A4
 
-        pedidos_cotacao.append(pedido)
+        y = altura - 50
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, f"Pedido de Cotação - RM {rm_number}")
+        y -= 30
 
-        sucesso, erro_email = enviar_email_cotacao(pedido)
-        if sucesso:
-            flash(f"Pedido de cotação da RM {rm_number} enviado com sucesso!", "success")
-            rm_obj.atualizar_status("APENAS COTAÇÃO")
-        else:
-            flash(f"Erro ao enviar email: {erro_email}", "error")
+        c.setFont("Helvetica", 12)
+        c.drawString(50, y, f"Requisitante: {rm_obj.requisitante}")
+        y -= 20
+        c.drawString(50, y, f"Fornecedores Selecionados: {', '.join(fornecedores_emails)}")
+        y -= 20
+        c.drawString(50, y, f"Prazo de Entrega Desejado: {prazo_entrega}")
+        y -= 20
+        c.drawString(50, y, f"Condições Comerciais: {condicoes}")
+        y -= 20
+        c.drawString(50, y, f"Observações: {observacoes}")
+        y -= 40
 
-        return redirect(url_for("pedidos_compras"))
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(50, y, "Itens Solicitados:")
+        y -= 20
+        c.setFont("Helvetica", 11)
+        for item in rm_obj.itens:
+            c.drawString(60, y, f"- {item.quantidade} x {item.descricao}")
+            y -= 18
+            if y < 80:
+                c.showPage()
+                y = altura - 50
+
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+
+        # Atualiza status
+        rm_obj.atualizar_status("APENAS COTAÇÃO")
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"Pedido_Cotacao_RM{rm_number}.pdf",
+            mimetype="application/pdf"
+        )
 
     return render_template(
         "pedidos_compras.html",
         rm_aprovadas=rm_aprovadas,
         fornecedores=fornecedores,
         pedidos_cotacao=pedidos_cotacao,
-        pagina_ativa="pedidos_compras"  # variável para controle da active class
+        pagina_ativa="pedidos_compras"
     )
-
-
-
-def enviar_email_cotacao(pedido):
-    """
-    Função simples para enviar emails para fornecedores.
-    Altere com o SMTP do seu servidor de email.
-    """
-    try:
-        smtp_server = "smtp.exemplo.com"
-        smtp_port = 587
-        smtp_user = "usuario@exemplo.com"
-        smtp_password = "senha"
-
-        msg = EmailMessage()
-        msg['From'] = smtp_user
-        msg['To'] = ", ".join(pedido['fornecedores'])
-        msg['Subject'] = f"Pedido de Cotação - RM {pedido['rm_number']}"
-
-        # Monta corpo do email
-        itens_texto = "\n".join([f"- {i['quantidade']} x {i['descricao']}" for i in pedido['itens']])
-        corpo = f"""
-Prezado fornecedor,
-
-Solicitamos cotação para os seguintes itens da Requisição RM {pedido['rm_number']}:
-
-{itens_texto}
-
-Prazo de entrega desejado: {pedido['prazo_entrega']}
-Condições comerciais: {pedido['condicoes']}
-
-Observações:
-{pedido['observacoes']}
-
-Favor enviar sua proposta o mais rápido possível.
-
-Atenciosamente,
-Setor de Compras
-        """
-
-        msg.set_content(corpo)
-
-        # Abrir conexão SMTP e enviar
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
-        return True, None
-    except Exception as e:
-        print(f"Erro ao enviar email: {e}")
-        return False, str(e)
-
 
 if __name__ == '__main__':
     # debug=True apenas para desenvolvimento

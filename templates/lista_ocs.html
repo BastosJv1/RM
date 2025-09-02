@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista de Ordens de Compra</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; color: #1f2937; margin:0; padding:0; }
+.container { max-width: 1200px; margin:30px auto; padding:20px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+h1 { text-align:center; color:#1e3a8a; margin-bottom:25px; font-size:2rem; }
+button.voltar { padding:8px 16px; background-color:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; margin-bottom:20px; font-weight:bold; }
+button.voltar:hover { background-color:#1e40af; }
+.table-container { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.95rem; min-width:1200px; }
+th, td { padding:10px 14px; text-align:left; border-bottom:1px solid #e5e7eb; }
+th { background-color:#e0e7ff; color:#1e3a8a; font-weight:600; }
+tr:hover { background-color:#f0f4ff; }
+a.link-nf { color:#2563eb; text-decoration:none; font-weight:500; }
+a.link-nf:hover { text-decoration:underline; }
+.status-entrega { font-weight:bold; padding:4px 8px; border-radius:6px; display:inline-block; }
+.status-entrega.pendente { background-color:#fef3c7; color:#b45309; }
+.status-entrega.concluido { background-color:#dcfce7; color:#15803d; }
+.status-entrega.atrasado { background-color:#fee2e2; color:#b91c1c; }
+td[contenteditable] { background-color: #f9fafb; border-radius: 4px; padding:4px; }
+td[contenteditable]:focus { outline: 2px solid #2563eb; background-color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <button class="voltar" onclick="window.location.href='{{ url_for('oc') }}'">← Voltar</button>
+    <h1>Lista de Ordens de Compra</h1>
+
+    {% if ordens_de_compra %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº OC</th>
+                    <th>Descrição</th>
+                    <th>Qtd</th>
+                    <th>Categoria</th>
+                    <th>Centro de Custo</th>
+                    <th>Fornecedor</th>
+                    <th>Previsão</th>
+                    <th>Local Entrega</th>
+                    <th>Obs</th>
+                    <th>Status</th>
+                    <th>Preço Unit.</th>
+                    <th>Valor Inicial</th>
+                    <th>Valor Final</th>
+                    <th>NF</th>
+                    <th>Anexo NF</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in ordens_de_compra %}
+                <tr data-oc="{{ item.numero_oc }}">
+                    <td>{{ item.numero_oc }}</td>
+                    <td contenteditable="true" data-field="descricao">{{ item.descricao }}</td>
+                    <td contenteditable="true" data-field="quantidade">{{ item.quantidade }}</td>
+                    <td contenteditable="true" data-field="categoria">{{ item.categoria }}</td>
+                    <td contenteditable="true" data-field="centro_custo">{{ item.centro_custo }}</td>
+                    <td contenteditable="true" data-field="fornecedor">{{ item.fornecedor }}</td>
+                    <td contenteditable="true" data-field="previsao_entrega">{{ item.previsao_entrega }}</td>
+                    <td contenteditable="true" data-field="local_entrega">{{ item.local_entrega }}</td>
+                    <td contenteditable="true" data-field="obs">{{ item.obs }}</td>
+                    <td contenteditable="true" data-field="status_entrega">
+                        <span class="status-entrega {{ item.status_entrega|lower }}">{{ item.status_entrega }}</span>
+                    </td>
+                    <td contenteditable="true" data-field="preco_unitario">R$ {{ "%.2f"|format(item.preco_unitario|float)|replace('.', ',') }}</td>
+                    <td contenteditable="true" data-field="valor_inicial_proposta">R$ {{ "%.2f"|format(item.valor_inicial_proposta|float)|replace('.', ',') }}</td>
+                    <td contenteditable="true" data-field="valor_final_proposta">R$ {{ "%.2f"|format(item.valor_final_proposta|float)|replace('.', ',') }}</td>
+                    <td contenteditable="true" data-field="nf">{{ item.nf or "—" }}</td>
+                    <td>
+                        {% if item.arquivo_nf %}
+                        <a href="{{ url_for('download_nf', filename=item.arquivo_nf) }}" target="_blank" class="link-nf">Abrir</a>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align:center; color:#6b7280;">Nenhuma ordem de compra cadastrada.</p>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('td[contenteditable]').forEach(td => {
+    td.addEventListener('blur', () => {
+        const tr = td.closest('tr');
+        const numero_oc = tr.dataset.oc;
+        const field = td.dataset.field;
+        let value = td.innerText.trim();
+
+        // Remove R$ e converte para número se for campos de valores
+        if(['preco_unitario','valor_inicial_proposta','valor_final_proposta'].includes(field)){
+            value = value.replace('R$', '').replace(/\./g,'').replace(',','.');
+            value = parseFloat(value) || 0;
+        }
+
+        fetch('/update_oc', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({numero_oc, field, value})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                console.log('Atualizado com sucesso');
+            } else {
+                alert('Erro ao atualizar OC');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Erro ao atualizar OC');
+        });
+    });
+});
+</script>
+
+</body>
+</html>

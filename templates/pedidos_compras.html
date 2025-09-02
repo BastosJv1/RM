@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pedidos de Compras - Formalizar Cotação</title>
+  <title>Formalizar Cotação</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -195,7 +195,14 @@
   </nav>
 </div>
 <main id="main-content">
-  <h1>Pedidos de Compras - Formalizar Cotação</h1>
+  <div style="display:flex; justify-content:flex-start; margin-bottom:10px;">
+    <button onclick="window.location.href='{{ url_for('controle') }}'" 
+            style="padding:6px 12px; font-size:0.95rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+        ← Voltar
+    </button>
+  </div>
+  
+  <h1>Formalizar Cotação</h1>
 
   <!-- Flash messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -208,6 +215,56 @@
     {% endif %}
   {% endwith %}
 
+<!-- Botão para abrir/fechar lista de fornecedores -->
+<button type="button" class="btn btn-secondary mb-3" onclick="toggleFornecedores()">
+    Gerenciar Fornecedores
+</button>
+
+<!-- Lista de fornecedores (inicialmente escondida) -->
+<div id="fornecedores-panel" style="display:none; border:1px solid #ccc; padding:15px; border-radius:8px; margin-bottom:20px;">
+    <h4>Fornecedores Cadastrados</h4>
+
+    <!-- Formulário para adicionar novo fornecedor -->
+    <form method="POST" action="{{ url_for('adicionar_fornecedor') }}" class="mb-3">
+        <input type="text" name="nome" placeholder="Nome do fornecedor" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+    </form>
+
+    <!-- Tabela de fornecedores -->
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in fornecedores %}
+            <tr>
+                <td>{{ f.nome }}</td>
+                <td>{{ f.email }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('excluir_fornecedor', email=f.email) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Deseja realmente excluir este fornecedor?');">
+                            Excluir
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleFornecedores() {
+    const panel = document.getElementById("fornecedores-panel");
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+</script>
+  
   {% if rm_aprovadas %}
     {% for r in rm_aprovadas %}
       <form method="POST" aria-label="Formulário pedido de cotação RM {{ r.id_req }}">
@@ -220,9 +277,9 @@
           {% endfor %}
         </ul>
         <label for="fornecedores_{{ r.id_req }}">Selecionar Fornecedor(s) <span aria-hidden="true" style="color:#dc2626;">*</span></label>
-        <select id="fornecedores_{{ r.id_req }}" name="fornecedores[]" multiple required aria-describedby="desc_fornecedores_{{ r.id_req }}">
-          {% for f in fornecedores %}
-            <option value="{{ f.email }}">{{ f.nome }} - {{ f.email }}</option>
+        <select name="fornecedores[]" multiple class="form-select" required>
+          {% for fornecedor in fornecedores %}
+            <option value="{{ fornecedor.email }}">{{ fornecedor.nome }} ({{ fornecedor.email }})</option>
           {% endfor %}
         </select>
         <div id="desc_fornecedores_{{ r.id_req }}" style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
