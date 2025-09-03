@@ -379,6 +379,7 @@ def controle():
 
     return render_template("controle.html", requisicoes=requisicoes)
 
+# Atualizar Status Através do Almoxarifado e dar baixa.
 @app.route("/atualizar_status", methods=["POST"])
 def atualizar_status():
     if not session.get("logado"):
@@ -388,12 +389,21 @@ def atualizar_status():
     rm = data.get("rm")
     novo_status = data.get("status")
 
-    req = next((r for r in requisicoes if str(r.id_req) == rm), None)
-    if req and novo_status:
+    if not novo_status:
+        return jsonify({"error": "Status inválido"}), 400
+
+    # Procura por RM numérica
+    req = next((r for r in requisicoes if str(r.id_req) == str(rm)), None)
+    # Se não encontrar, tenta procurar por OC
+    if not req:
+        req = next((r for r in requisicoes if r.numero_oc == str(rm)), None)
+
+    if req:
         req.atualizar_status(novo_status)
         return jsonify({"success": True})
 
     return jsonify({"error": "RM ou status inválido"}), 400
+
 
 
 @app.route("/busca_arquivos")
@@ -463,6 +473,14 @@ def oc():
         descricoes = dados.get('descricao[]', [])
         quantidades = dados.get('quantidade[]', [])
         precos_unitarios = dados.get('preco_unitario[]', [])
+
+        # 🔹 Vínculo da OC com a RM
+        rm_referencia = request.form.get("rm_referencia")  # campo hidden vindo do oc.html
+        if rm_referencia:
+            rm_relacionada = next((r for r in requisicoes if str(r.id_req) == str(rm_referencia)), None)
+            if rm_relacionada:
+                rm_relacionada.numero_oc = numero_oc
+
 
         for i in range(len(descricoes)):
             preco_str = precos_unitarios[i] if i < len(precos_unitarios) else "R$ 0,00"
@@ -572,7 +590,7 @@ def acompanhamento_entregas():
     # Cria um dicionário para localizar RM pela OC, se existir
     rm_por_oc = {r.numero_oc: r for r in requisicoes if r.numero_oc}
 
-    # 1️⃣ Itens das OCs
+    # Itens das OCs
     for oc in ordens_de_compra:
         numero_oc = oc.get('numero_oc', '')
         previsao = oc.get('previsao_entrega', '').strip()
@@ -581,35 +599,65 @@ def acompanhamento_entregas():
         if oc.get('baixa', False):
             continue
 
-        if previsao:
-            rm_relacionada = rm_por_oc.get(numero_oc)
-            if rm_relacionada and rm_relacionada.data_conclusao:
-                continue
+        # Localiza a RM relacionada
+        rm_relacionada = rm_por_oc.get(numero_oc)
+        if rm_relacionada and rm_relacionada.data_conclusao:
+            continue
 
-            data_formatada = previsao
+        # Processa previsão de entrega e alertas
+        data_formatada = previsao
+        alerta_item = None
+        try:
+            data_obj = datetime.strptime(previsao, '%Y-%m-%d').date()
+            data_formatada = data_obj.strftime('%d/%m/%Y')
+            dias_para_entrega = (data_obj - hoje).days
+            if dias_para_entrega < 0:
+                alerta_vencido = True
+                alerta_item = "Vencida"
+            elif dias_para_entrega <= 3:
+                alerta_proximo = True
+                alerta_item = "Próxima a vencer"
+        except Exception:
             alerta_item = None
-            try:
-                data_obj = datetime.strptime(previsao, '%Y-%m-%d').date()
-                data_formatada = data_obj.strftime('%d/%m/%Y')
-                dias_para_entrega = (data_obj - hoje).days
-                if dias_para_entrega < 0:
-                    alerta_vencido = True
-                    alerta_item = "Vencida"
-                elif dias_para_entrega <= 3:
-                    alerta_proximo = True
-                    alerta_item = "Próxima a vencer"
-            except Exception:
-                alerta_item = None
 
-            itens_para_exibir.append({
-                'numero_oc': numero_oc,
-                'material': oc.get('descricao', ''),
-                'quantidade': oc.get('quantidade', ''),
-                'centro_custo': oc.get('centro_custo', ''),
-                'previsao_entrega': data_formatada,
-                'local_entrega': oc.get('local_entrega', ''),
-                'alerta': alerta_item
+        # Inicializa a lista de itens antes de qualquer condição
+        itens_rm = []
+
+        if rm_relacionada:
+            for item_rm in rm_relacionada.itens:
+                itens_rm.append({
+                    "descricao": item_rm.descricao,
+                    "quantidade": item_rm.quantidade,
+                    "unidade_medida": getattr(item_rm, "unidade_medida", ""),
+                    "chegado": getattr(item_rm, "chegado", False),
+                    "quantidade_ok": getattr(item_rm, "quantidade_ok", True),
+                    "qualidade_ok": getattr(item_rm, "qualidade_ok", True),
+                    "embalagem_ok": getattr(item_rm, "embalagem_ok", True),
+                    "observacoes": getattr(item_rm, "observacoes", "")
+                })
+        else:
+            # Cria um item padrão para exibir checkboxes mesmo sem RM
+            itens_rm.append({
+                "descricao": oc.get('descricao', ''),
+                "quantidade": oc.get('quantidade', ''),
+                "unidade_medida": oc.get('unidade_medida', ''),
+                "chegado": False,
+                "quantidade_ok": True,
+                "qualidade_ok": True,
+                "embalagem_ok": True,
+                "observacoes": ""
             })
+
+        itens_para_exibir.append({
+            'numero_oc': numero_oc,
+            'material': oc.get('descricao', ''),
+            'quantidade': oc.get('quantidade', ''),
+            'centro_custo': oc.get('centro_custo', ''),
+            'previsao_entrega': data_formatada,
+            'local_entrega': oc.get('local_entrega', ''),
+            'alerta': alerta_item,
+            'itens': itens_rm  # <-- Adiciona os itens da RM
+        })
 
     alertas = []
     if alerta_vencido:
@@ -619,21 +667,28 @@ def acompanhamento_entregas():
 
     return render_template("acompanhamento_entregas.html", itens=itens_para_exibir, alertas=alertas)
 
+
+
 # Baixa na Entrega do Almoxarifado.
 @app.route("/almoxarifado/entregas/baixa/<numero_oc>", methods=["POST"])
 def dar_baixa_entrega(numero_oc):
     if not session.get("logado"):
         return jsonify({"error": "não autorizado"}), 401
 
-    # Marca como baixa os itens da OC
-    for oc in ordens_de_compra:
-        if oc.get('numero_oc', '') == numero_oc and not oc.get('baixa', False):
-            oc['baixa'] = True  # marca como entregue
+    dados = request.get_json()
 
-    # Atualiza o status da RM correspondente
-    rm_relacionada = next((r for r in requisicoes if r.numero_oc == numero_oc), None)
-    if rm_relacionada:
-        rm_relacionada.status = "PEDIDO ENTREGUE"
+    # Marca como baixa e atualiza itens
+    for oc in ordens_de_compra:
+        if oc.get('numero_oc', '') == numero_oc:
+            oc['baixa'] = True
+            rm_relacionada = next((r for r in requisicoes if r.numero_oc == numero_oc), None)
+            if rm_relacionada:
+                for idx, item in enumerate(rm_relacionada.itens):
+                    item.chegado = dados.get(f'chegado_{idx}', False)
+                    item.quantidade_ok = dados.get(f'quantidade_ok_{idx}', 'não') == 'sim'
+                    item.qualidade_ok = dados.get(f'qualidade_ok_{idx}', 'não') == 'sim'
+                    item.embalagem_ok = dados.get(f'embalagem_ok_{idx}', 'não') == 'sim'
+                    item.observacoes = dados.get(f'obs_{idx}', '')
 
     return jsonify({"success": True})
 

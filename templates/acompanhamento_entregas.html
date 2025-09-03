@@ -7,114 +7,279 @@
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 20px;
-    background: #fafafa;
+    margin: 0;
+    padding: 0;
+    background: #f3f4f6;
+    color: #1f2937;
   }
-  h1 {
-    color: #2563eb;
-    text-align: center;
-    margin-bottom: 30px;
+
+  #sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background-color: #1e3a8a;
+    color: white;
+    padding: 30px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    font-weight: 600;
   }
-  .alerta {
-    background-color: #fbbf24;
-    color: #78350f;
-    padding: 12px 20px;
+
+  #sidebar a {
+    color: white;
+    text-decoration: none;
+    padding: 12px 15px;
+    margin-bottom: 10px;
     border-radius: 8px;
-    margin-bottom: 20px;
-    font-weight: bold;
+    display: block;
+    transition: background-color 0.3s ease;
   }
-  table {
-    border-collapse: collapse;
-    width: 100%;
+
+  #sidebar a:hover,
+  #sidebar a.active {
+    background-color: #2563eb;
+  }
+
+  main {
+    margin-left: 260px;
+    padding: 30px;
+  }
+
+  h1 { text-align: center; color: #1e3a8a; margin-bottom: 40px; }
+
+  .entrega-card {
     background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    padding: 16px 24px;
+    transition: transform 0.2s;
+  }
+  .entrega-card:hover { transform: translateY(-2px); }
+
+  .entrega-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .entrega-header strong { font-size: 1.1rem; color: #1d4ed8; }
+  .entrega-header span { font-size: 0.95rem; color: #2563eb; font-weight: 600; }
+
+  .entrega-details {
+    margin-top: 12px;
+    display: none;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 12px;
+  }
+  .entrega-card.active .entrega-details { display: block; }
+
+  .item-checagem {
+    background: #f0f4ff;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 12px 16px;
+    margin-bottom: 12px;
   }
-  th, td {
-    padding: 12px 18px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
+
+  .item-checagem label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
   }
-  th {
-    background-color: #e0e7ff;
-    color: #2563eb;
+
+  .item-checagem input[type="text"], 
+  .item-checagem select {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.9rem;
   }
-  tr:hover {
-    background-color: #f0f4ff;
+
+  button {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 700;
   }
-  tr.vencida {
-    background-color: #fecaca;
-  }
-  tr.proxima {
-    background-color: #fef3c7;
+  button:hover { background-color: #1e40af; }
+
+  @media (max-width: 900px) {
+    main { margin-left: 0; padding: 20px; }
   }
 </style>
 </head>
 <body>
-<button onclick="window.location.href='{{ url_for('controle') }}'" 
-        style="padding:5px 10px; width: 80px; font-size: 0.9rem; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
-    ← Voltar
-</button>
+  
+<div id="sidebar" role="navigation" aria-label="Menu principal">
+  <nav>
+    <div class="menu-section">
+      <h3>Setor de Compras</h3>
+      <a href="{{ url_for('controle') }}" class="{% if pagina_ativa == 'controle' %}active{% endif %}">📅 Controle RM</a>
+      <a href="{{ url_for('pedidos_compras') }}" class="{% if pagina_ativa == 'pedidos_compras' %}active{% endif %}">📋 Pedidos de Compras</a>
+      <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">🛒 OC</a>
+      <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">📂 Buscar Arquivos</a>
+    </div>
+    <div class="menu-section">
+      <h3>Almoxarifado</h3>
+      <a href="{{ url_for('acompanhamento_entregas') }}">📦 Entregas</a>
+    </div>
+    <div class="menu-section">
+      <h3>Frota</h3>
+      <a href="{{ url_for('frota_expedicao') }}">🚚 Expedição</a>
+    </div>
+  </nav>
+</div>
 
-<h1>Acompanhamento de Entregas</h1>
+<main>
+  <div style="display:flex; justify-content: flex-start; margin-bottom: 20px;">
+    <button onclick="window.location.href='{{ url_for('controle') }}'">← Voltar</button>
+  </div>
 
-{% for alerta in alertas %}
-  <div class="alerta" role="alert">{{ alerta }}</div>
-{% endfor %}
+  <h1>Acompanhamento de Entregas</h1>
 
-<table aria-label="Tabela de previsão de entregas das OCs">
-  <thead>
-    <tr>
-      <th>Nº OC</th>
-      <th>Material</th>
-      <th>Quantidade</th>
-      <th>Centro de Custo</th>
-      <th>Previsão de Entrega</th>
-      <th>Local de Entrega</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in itens %}
-    <tr class="{% if item.alerta == 'Vencida' %}vencida{% elif item.alerta == 'Próxima a vencer' %}proxima{% endif %}">
-      <td>{{ item.numero_oc }}</td>
-      <td>{{ item.material }}</td>
-      <td>{{ item.quantidade }}</td>
-      <td>{{ item.centro_custo }}</td>
-      <td>{{ item.previsao_entrega }}</td>
-      <td>{{ item.local_entrega }}</td>
-      <td>
-        {{ item.numero_oc }}
-        {% if item.numero_oc %}
-        <button onclick="darBaixa('{{ item.numero_oc }}')" 
-                style="margin-left:5px; padding:2px 6px; font-size:0.8rem; background-color:#2563eb; color:white; border:none; border-radius:4px; cursor:pointer;">
-          Dar Baixa
-        </button>
-        {% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="6" style="text-align:center;">Nenhuma previsão de entrega cadastrada.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+  {% for alerta in alertas %}
+    <div style="background:#fbbf24; color:#78350f; padding:12px 20px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+      {{ alerta }}
+    </div>
+  {% endfor %}
+
+  {% for item in itens %}
+  <div class="entrega-card" tabindex="0" aria-expanded="false">
+    <div class="entrega-header" onclick="toggleDetails(this)">
+      <strong>OC {{ item.numero_oc }} - {{ item.material }}</strong>
+      <span>Ver itens ▸</span>
+    </div>
+    <div class="entrega-details">
+      <form id="form-{{ item.numero_oc }}">
+        {% for i in item.itens %}
+        <div class="item-checagem">
+          <strong>{{ i.quantidade }} x {{ i.descricao }} ({{ i.unidade_medida }})</strong>
+
+          <label>
+            <input type="checkbox" name="chegado_{{ loop.index0 }}" {% if i.chegado %}checked{% endif %}>
+            Item chegou
+          </label>
+
+          <label>
+            Quantidade correta:
+            <select name="quantidade_ok_{{ loop.index0 }}">
+              <option value="sim" {% if i.quantidade_ok %}selected{% endif %}>Sim</option>
+              <option value="não" {% if not i.quantidade_ok %}selected{% endif %}>Não</option>
+            </select>
+          </label>
+
+          <label>
+            Qualidade ok:
+            <select name="qualidade_ok_{{ loop.index0 }}">
+              <option value="sim" {% if i.qualidade_ok %}selected{% endif %}>Sim</option>
+              <option value="não" {% if not i.qualidade_ok %}selected{% endif %}>Não</option>
+            </select>
+          </label>
+
+          <label>
+            Embalagem intacta:
+            <select name="embalagem_ok_{{ loop.index0 }}">
+              <option value="sim" {% if i.embalagem_ok %}selected{% endif %}>Sim</option>
+              <option value="não" {% if not i.embalagem_ok %}selected{% endif %}>Não</option>
+            </select>
+          </label>
+
+          <label>
+            Observações:
+            <input type="text" name="obs_{{ loop.index0 }}" value="{{ i.observacoes }}">
+          </label>
+        </div>
+        {% endfor %}
+
+        <label for="status_rm_{{ item.numero_oc }}">Atualizar Status da RM:</label>
+        <select id="status_rm_{{ item.numero_oc }}">
+          {% for st in ["AGUARDANDO APROVAÇÃO","SOLICITAÇÃO APROVADA","SOLICITAÇÃO PARCIALMENTE AUTORIZADA","NÃO APROVADA","APENAS COTAÇÃO","COMPRA EFETUADA","EM EXPEDIÇÃO","PEDIDO ENTREGUE","PEDIDO DUPLICADO","PEDIDO CANCELADO"] %}
+            <option value="{{ st }}">{{ st }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="button" onclick="atualizarStatusRM('{{ item.numero_oc }}')">Atualizar Status</button>
+        <button type="button" onclick="darBaixa('{{ item.numero_oc }}')">Dar Baixa</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+    <p style="text-align:center;">Nenhuma previsão de entrega cadastrada.</p>
+  {% endfor %}
+</main>
+
 <script>
-function darBaixa(numero_oc){
-    fetch(`/almoxarifado/entregas/baixa/${numero_oc}`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"}
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.success){
-            alert("Entrega baixada com sucesso!");
-            location.reload(); // Atualiza a página para refletir o status
-        } else {
-            alert("Erro ao dar baixa: " + (data.error || ''));
-        }
-    })
-    .catch(err => alert("Erro ao dar baixa: " + err));
+function toggleDetails(header) {
+  const card = header.parentElement;
+  const expanded = card.classList.toggle('active');
+  card.setAttribute('aria-expanded', expanded);
+}
+
+document.querySelectorAll('.entrega-card').forEach(card => {
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleDetails(card.querySelector('.entrega-header'));
+    }
+  });
+});
+
+function darBaixa(numero_oc) {
+  const form = document.getElementById(`form-${numero_oc}`);
+  const dados = {};
+
+  Array.from(form.elements).forEach(el => {
+    if(el.name){
+      dados[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+  });
+
+  fetch(`/almoxarifado/entregas/baixa/${numero_oc}`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(dados)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success){
+      alert("Entrega baixada com sucesso!");
+      location.reload();
+    } else {
+      alert("Erro ao dar baixa: " + (data.error || ''));
+    }
+  })
+  .catch(err => alert("Erro ao dar baixa: " + err));
+}
+
+
+function atualizarStatusRM(numero_oc) {
+  const select = document.getElementById(`status_rm_${numero_oc}`);
+  const novo_status = select.value;
+
+  fetch('/atualizar_status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rm: numero_oc, status: novo_status })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      alert("Status da RM atualizado com sucesso!");
+      location.reload();
+    } else {
+      alert("Erro ao atualizar status: " + (data.error || ''));
+    }
+  })
+  .catch(err => alert("Erro ao atualizar status: " + err));
 }
 </script>
 </body>

@@ -36,6 +36,21 @@
   tr:hover {
     background-color: #f0f4ff;
   }
+  .acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-status {
+    background-color: #3b82f6;
+    color: white;
+  }
 </style>
 </head>
 <body>
@@ -58,6 +73,7 @@
       <th>Centro de Custo</th>
       <th>Observações Almoxarifado</th>
       <th>Número da OC</th>
+      <th>Ações</th>
     </tr>
   </thead>
   <tbody>
@@ -65,7 +81,7 @@
     <tr>
       <td>{{ r.id_req }}</td>
       <td>{{ r.requisitante }}</td>
-      <td>{{ r.status }}</td>
+      <td id="status-{{ r.id_req }}">{{ r.status }}</td>
       <td>
         {% for item in r.itens %}
           {{ item.quantidade }} x {{ item.descricao }}<br/>
@@ -76,6 +92,14 @@
       <td>{{ r.centro_custo }}</td>
       <td>{{ r.observacoes_almoxarifado }}</td>
       <td>{{ r.numero_oc }}</td>
+      <td class="acoes">
+        <select id="status-rm-{{ r.id_req }}">
+          {% for st in ["AGUARDANDO APROVAÇÃO","SOLICITAÇÃO APROVADA","SOLICITAÇÃO PARCIALMENTE AUTORIZADA","NÃO APROVADA","APENAS COTAÇÃO","COMPRA EFETUADA","EM EXPEDIÇÃO","PEDIDO ENTREGUE","PEDIDO DUPLICADO","PEDIDO CANCELADO"] %}
+            <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn-status" onclick="atualizarStatusRM('{{ r.id_req }}')">Atualizar Status</button>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
@@ -83,5 +107,27 @@
 {% else %}
 <p style="text-align:center;">Não há RMs em expedição no momento.</p>
 {% endif %}
+
+<script>
+function atualizarStatusRM(rmId) {
+  const statusSelecionado = document.getElementById(`status-rm-${rmId}`).value;
+
+  fetch('/atualizar_status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rm: rmId, status: statusSelecionado })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById(`status-${rmId}`).innerText = statusSelecionado;
+      alert("Status atualizado com sucesso!");
+    } else {
+      alert("Erro ao atualizar status: " + (data.error || ''));
+    }
+  });
+}
+
+</script>
 </body>
 </html>
