@@ -1,6 +1,51 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <script>
+  let rmsDisponiveis = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const rmSelect = document.getElementById('rm_referencia');
+
+    // Busca todas as RMs do backend
+    fetch('/api/rms')
+      .then(res => res.json())
+      .then(data => {
+        rmsDisponiveis = data;
+
+        // Popula o select com as RMs
+        rmsDisponiveis.forEach(rm => {
+          const option = document.createElement('option');
+          option.value = rm.id_req;
+          option.textContent = `RM ${rm.id_req} - ${rm.requisitante}`;
+          rmSelect.appendChild(option);
+        });
+      });
+
+    rmSelect.addEventListener('change', () => {
+      const valor = parseInt(rmSelect.value);
+      const rmSelecionada = rmsDisponiveis.find(rm => rm.id_req === valor);
+
+      if (rmSelecionada) {
+        // Preenche os campos da OC automaticamente
+        document.getElementById('descricao_geral').value =
+          rmSelecionada.itens.map(i => `${i.quantidade} x ${i.descricao} (${i.unidade_medida})`).join('\n');
+        document.getElementById('centro_custo').value = rmSelecionada.centro_custo;
+        document.getElementById('obs_almoxarifado').value = rmSelecionada.observacoes_almoxarifado;
+        document.getElementById('descricao1').value = rmSelecionada.itens[0]?.descricao || '';
+        document.getElementById('quantidade1').value = rmSelecionada.itens[0]?.quantidade || 1;
+        // Aqui você pode adicionar mais campos conforme necessário
+      } else {
+        // Se nenhuma RM for selecionada, limpa os campos
+        document.getElementById('descricao_geral').value = '';
+        document.getElementById('centro_custo').value = '';
+        document.getElementById('obs_almoxarifado').value = '';
+        document.getElementById('descricao1').value = '';
+        document.getElementById('quantidade1').value = 1;
+      }
+    });
+  });
+  </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ordem de Compra</title>
@@ -231,7 +276,9 @@
     <div class="form-row">
       <div class="form-group">
         <label for="rm_referencia">RM de Referência</label>
-        <input type="number" id="rm_referencia" name="rm_referencia" min="1" placeholder="Digite o número da RM para preencher dados automaticamente" />
+        <select id="rm_referencia" name="rm_referencia">
+        <option value="">Selecione uma RM...</option>
+      </select>
       </div>
       <div class="form-group">
         <label for="numero_oc">Nº da OC <span aria-label="required">*</span></label>

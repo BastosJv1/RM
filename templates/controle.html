@@ -147,9 +147,6 @@
       <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">
         <span class="icon" aria-hidden="true">🛒</span><span>OC</span>
       </a>
-      <a href="{{ url_for('kanban') }}" class="{% if pagina_ativa == 'kanban' %}active{% endif %}">
-        <span class="icon" aria-hidden="true">📅</span><span>Timeline das RM's</span>
-      </a>
       <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">
         <span class="icon" aria-hidden="true">📂</span><span>Buscar Arquivos</span>
       </a>
@@ -179,10 +176,25 @@
     {% endif %}
   {% endwith %}
 
+{% set status_emojis = {
+  "AGUARDANDO APROVAÇÃO": "⏳",
+  "SOLICITAÇÃO APROVADA": "✅",
+  "SOLICITAÇÃO PARCIALMENTE AUTORIZADA": "🟡",
+  "NÃO APROVADA": "❌",
+  "APENAS COTAÇÃO": "📑",
+  "COMPRA EFETUADA": "🛒",
+  "EM EXPEDIÇÃO": "🚚",
+  "PEDIDO ENTREGUE": "📦",
+  "PEDIDO DUPLICADO": "🔁",
+  "PEDIDO CANCELADO": "🚫"
+} %}
+
   {% for r in requisicoes %}
   <div class="rm-card" tabindex="0" aria-expanded="false">
     <div class="rm-header" onclick="toggleDetails(this)">
-      <strong>RM {{ r.id_req }} - {{ r.requisitante }}</strong>
+      <strong>
+        {{ status_emojis[r.status] }} RM {{ r.id_req }} - {{ r.requisitante }}
+      </strong>
       <span>Itens: {{ r.itens|length }} ▸</span>
     </div>
     
@@ -211,8 +223,10 @@
           <div class="field">
             <label for="status_solicitacao-{{ r.id_req }}">Status</label>
             <select id="status_solicitacao-{{ r.id_req }}" name="status_solicitacao">
-              {% for st in ["AGUARDANDO APROVAÇÃO","SOLICITAÇÃO APROVADA","SOLICITAÇÃO PARCIALMENTE AUTORIZADA","NÃO APROVADA","APENAS COTAÇÃO","COMPRA EFETUADA","EM EXPEDIÇÃO","PEDIDO ENTREGUE","PEDIDO DUPLICADO","PEDIDO CANCELADO"] %}
-              <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>{{ st }}</option>
+              {% for st in status_emojis.keys() %}
+                <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>
+                  {{ status_emojis[st] }} {{ st }}
+                </option>
               {% endfor %}
             </select>
           </div>
@@ -239,8 +253,8 @@
 
         <div class="field-group">
           <div class="field">
-            <label for="obs_comprador-{{ r.id_req }}">Observações Comprador</label>
-            <textarea id="obs_comprador-{{ r.id_req }}" name="obs_comprador">{{ r.observacoes_comprador }}</textarea>
+            <label for="finalidade-{{ r.id_req }}">Finalidade da Requisição</label>
+            <textarea id="finalidade-{{ r.id_req }}" name="finalidade">{{ r.finalidade }}</textarea>
           </div>
           <div class="field">
             <label for="obs_almoxarifado-{{ r.id_req }}">Observações Almoxarifado</label>

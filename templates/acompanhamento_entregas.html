@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Acompanhamento de Entregas - Almoxarifado</title>
+<title>Acompanhamento de Entregas</title>
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -58,7 +58,7 @@
     ← Voltar
 </button>
 
-<h1>Acompanhamento de Entregas - Almoxarifado</h1>
+<h1>Acompanhamento de Entregas</h1>
 
 {% for alerta in alertas %}
   <div class="alerta" role="alert">{{ alerta }}</div>
@@ -109,7 +109,7 @@ function darBaixa(numero_oc){
     .then(data => {
         if(data.success){
             alert("Entrega baixada com sucesso!");
-            location.reload();
+            location.reload(); // Atualiza a página para refletir o status
         } else {
             alert("Erro ao dar baixa: " + (data.error || ''));
         }

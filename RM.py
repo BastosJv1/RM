@@ -253,12 +253,13 @@ class Item:
 
 
 class Requisicao:
-    def __init__(self, id_req, requisitante, itens):
+    def __init__(self, id_req, requisitante, itens, finalidade=""):
         self.id_req = id_req
         self.requisitante = requisitante
         self.itens = itens
         self.funcionario_responsavel = None
         self.status = "AGUARDANDO APROVAÇÃO"
+        self.finalidade = finalidade  
         self.historia_status = [(self.status, datetime.now())]
         self.centro_custo = ""
         self.observacoes_comprador = ""
@@ -327,6 +328,7 @@ def novo_pedido():
         especificacoes = request.form.getlist("especificacoes[]")
         unidade_medida = request.form.getlist("unidade_medida[]")
         qtds = request.form.getlist("qtd[]")
+        finalidade = request.form.get('finalidade')
         anexos = request.files.getlist("anexo[]")
 
         itens = []
@@ -346,7 +348,7 @@ def novo_pedido():
             item.unidade_medida = unidade
             itens.append(item)
 
-        nova_req = Requisicao(id_req, requisitante, itens)
+        nova_req = Requisicao(id_req, requisitante, itens, finalidade=finalidade)
         nova_req.centro_custo = centro_custo  # adicionando o centro de custo
         requisicoes.append(nova_req)
 
@@ -376,27 +378,6 @@ def controle():
         return redirect(url_for("controle"))
 
     return render_template("controle.html", requisicoes=requisicoes)
-
-
-@app.route("/kanban")
-def kanban():
-    if not session.get("logado"):
-        return redirect(url_for("login"))
-
-    status_categories = [
-        "SOLICITAÇÃO APROVADA",
-        "COMPRA EFETUADA",
-        "EM EXPEDIÇÃO",
-        "PEDIDO ENTREGUE"
-    ]
-
-    requisicoes_por_status = {status: [] for status in status_categories}
-    for r in requisicoes:
-        if r.status in requisicoes_por_status:
-            requisicoes_por_status[r.status].append(r)
-
-    return render_template("kanban.html", requisicoes_por_status=requisicoes_por_status)
-
 
 @app.route("/atualizar_status", methods=["POST"])
 def atualizar_status():
@@ -450,24 +431,23 @@ def buscar():
     })
 
 
-@app.route("/api/get_rm_data/<int:rm_number>")
-def get_rm_data(rm_number):
-    if not session.get("logado"):
-        return jsonify({"error": "não autorizado"}), 401
+from flask import jsonify
 
-    req = next((r for r in requisicoes if r.id_req == rm_number), None)
-    if not req:
-        return jsonify({"error": "RM não encontrada"}), 404
-
-    dados_oc = {
-        "numero_oc": req.numero_oc or "",
-        "centro_custo": req.centro_custo or "",
-        "descricao": " / ".join([f"{item.descricao} (Qtd: {item.quantidade})" for item in req.itens]) if req.itens else "",
-        "obs_almoxarifado": req.observacoes_almoxarifado or "",
-        "comprador_responsavel": req.comprador_responsavel or "",
-    }
-
-    return jsonify(dados_oc)
+@app.route('/api/rms')
+def api_rms():
+    # Aqui você retorna todas as RMs disponíveis, filtrando por status se necessário
+    rms_disponiveis = [
+        {
+            "id_req": r.id_req,
+            "requisitante": r.requisitante,
+            "itens": [{"descricao": i.descricao, "quantidade": i.quantidade, "unidade_medida": i.unidade_medida, "especificacoes": i.especificacoes} for i in r.itens],
+            "centro_custo": r.centro_custo,
+            "finalidade": r.finalidade,
+            "observacoes_almoxarifado": r.observacoes_almoxarifado
+        }
+        for r in requisicoes if r.status not in ["PEDIDO ENTREGUE", "PEDIDO CANCELADO"]
+    ]
+    return jsonify(rms_disponiveis)
 
 
 @app.route("/oc", methods=["GET", "POST"])
@@ -645,10 +625,15 @@ def dar_baixa_entrega(numero_oc):
     if not session.get("logado"):
         return jsonify({"error": "não autorizado"}), 401
 
-    # Marca como baixa todos os itens da OC
+    # Marca como baixa os itens da OC
     for oc in ordens_de_compra:
         if oc.get('numero_oc', '') == numero_oc and not oc.get('baixa', False):
             oc['baixa'] = True  # marca como entregue
+
+    # Atualiza o status da RM correspondente
+    rm_relacionada = next((r for r in requisicoes if r.numero_oc == numero_oc), None)
+    if rm_relacionada:
+        rm_relacionada.status = "PEDIDO ENTREGUE"
 
     return jsonify({"success": True})
 
