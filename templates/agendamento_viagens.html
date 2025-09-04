@@ -141,6 +141,16 @@
   <label for="motorista">Motorista</label>
   <input type="text" id="motorista" name="motorista" required />
 
+  <div id="lista-passageiros">
+    <div class="item-group">
+      <button type="button" class="btn-remove-item" onclick="removerItem(this)" style="display:none;" aria-label="Remover Passageiro">&times;</button>
+
+      <label>Passageiro</label>
+      <input type="text" name="passageiro[]" placeholder="Nome do passageiro" required />
+    </div>
+  </div>
+  <button type="button" class="btn-add-item" onclick="adicionarPassageiro()">Adicionar Passageiro</button>
+
   <label for="veiculo">Veículo | Placa</label>
   <input type="text" id="veiculo" name="veiculo" required />
 
@@ -161,8 +171,7 @@
       <textarea name="observacoes[]" rows="2"></textarea>
     </div>
   </div>
-
-  <button type="button" class="btn-add-item" onclick="adicionarItem()">Adicionar Trecho</button>
+  <button type="button" class="btn-add-item" onclick="adicionarTrecho()">Adicionar Trecho</button>
 
   <label for="empresa">Empresa</label>
   <input type="text" id="empresa" name="empresa" required />
@@ -183,7 +192,7 @@
 </form>
 
 <script>
-function adicionarItem() {
+function adicionarTrecho() {
   const container = document.getElementById('lista-trechos');
   const primeiroItem = container.querySelector('.item-group');
   const novoItem = primeiroItem.cloneNode(true);
@@ -192,8 +201,17 @@ function adicionarItem() {
   container.appendChild(novoItem);
 }
 
+function adicionarPassageiro() {
+  const container = document.getElementById('lista-passageiros');
+  const primeiroItem = container.querySelector('.item-group');
+  const novoItem = primeiroItem.cloneNode(true);
+  novoItem.querySelector('input').value = '';
+  novoItem.querySelector('.btn-remove-item').style.display = 'inline-block';
+  container.appendChild(novoItem);
+}
+
 function removerItem(button) {
-  const container = document.getElementById('lista-trechos');
+  const container = button.parentElement.parentElement;
   if(container.children.length > 1) {
     button.parentElement.remove();
   }

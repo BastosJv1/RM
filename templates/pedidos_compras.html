@@ -267,14 +267,34 @@ function toggleFornecedores() {
     {% for r in rm_aprovadas %}
       <form method="POST" aria-label="Formulário pedido de cotação RM {{ r.id_req }}">
         <input type="hidden" name="rm_number" value="{{ r.id_req }}" />
-        <label>Requisição RM {{ r.id_req }} - {{ r.requisitante }}</label>
-        <label>Itens para cotação:</label>
+
+        <!-- Cabeçalho Executivo -->
+        <div style="border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px;">
+          <h2 style="color:#1e3a8a;">Pedido de Cotação - RM {{ r.id_req }}</h2>
+          <p style="font-weight:600;">Solicitante: {{ r.requisitante }}</p>
+          <p>Data de Emissão: {{ data_emissao.strftime('%d/%m/%Y') }}</p>
+          <p>Referência: Requisição Interna de Materiais - RM {{ r.id_req }}</p>
+        </div>
+
+        <!-- Objetivo do Pedido -->
+        <label style="font-weight:700;">Objetivo:</label>
+        <p>Este pedido de cotação tem como objetivo obter propostas comerciais para aquisição dos itens listados abaixo, garantindo o melhor custo, prazo e condições comerciais para nossa empresa.</p>
+
+        <!-- Itens para Cotação -->
+        <label style="font-weight:700;">Itens Requeridos:</label>
         <ul>
           {% for item in r.itens %}
-            <li>{{ item.quantidade }} x {{ item.descricao }}</li>
+            <li>
+              <strong>{{ item.quantidade }} x {{ item.descricao }}</strong>
+              {% if item.observacoes %}<br><em>Observação:</em> {{ item.observacoes }}{% endif %}
+            </li>
           {% endfor %}
         </ul>
-        <label for="fornecedores_{{ r.id_req }}">Selecionar Fornecedor(s) <span aria-hidden="true" style="color:#dc2626;">*</span></label>
+
+        <!-- Seleção de Fornecedores -->
+        <label for="fornecedores_{{ r.id_req }}" style="font-weight:700;">
+          Fornecedores Contatados <span aria-hidden="true" style="color:#dc2626;">*</span>
+        </label>
         <select name="fornecedores[]" multiple class="form-select" required>
           {% for fornecedor in fornecedores %}
             <option value="{{ fornecedor.email }}">{{ fornecedor.nome }} ({{ fornecedor.email }})</option>
@@ -284,21 +304,40 @@ function toggleFornecedores() {
           Segure Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos fornecedores
         </div>
 
-        <label for="prazo_entrega_{{ r.id_req }}">Prazo de Entrega Desejado <span aria-hidden="true" style="color:#dc2626;">*</span></label>
+        <!-- Condições Requeridas -->
+        <label for="prazo_entrega_{{ r.id_req }}" style="font-weight:700;">Prazo de Entrega Desejado <span aria-hidden="true" style="color:#dc2626;">*</span></label>
         <input type="date" id="prazo_entrega_{{ r.id_req }}" name="prazo_entrega" required />
 
-        <label for="condicoes_{{ r.id_req }}">Condições Comerciais</label>
-        <textarea id="condicoes_{{ r.id_req }}" name="condicoes" placeholder="Descreva as condições comerciais..."></textarea>
+        <label for="condicoes_{{ r.id_req }}" style="font-weight:700;">Condições Comerciais Esperadas:</label>
+        <textarea id="condicoes_{{ r.id_req }}" name="condicoes" placeholder="Ex.: Condições de pagamento, descontos aplicáveis, validade da proposta, garantias e logística."></textarea>
 
-        <label for="observacoes_{{ r.id_req }}">Observações (opcional)</label>
-        <textarea id="observacoes_{{ r.id_req }}" name="observacoes" placeholder="Outras informações relevantes..."></textarea>
+        <label for="observacoes_{{ r.id_req }}" style="font-weight:700;">Observações Complementares (opcional)</label>
+        <textarea id="observacoes_{{ r.id_req }}" name="observacoes" placeholder="Ex.: Requisitos de embalagem, transporte, padrões de qualidade ou certificações necessárias."></textarea>
 
-        <button type="submit" aria-label="Enviar pedido de cotação para RM {{ r.id_req }}">Enviar Pedido de Cotação</button>
+        <!-- Instruções de Resposta -->
+        <div style="background:#f3f4f6; padding:15px; border-radius:8px; margin-top:20px; border-left: 4px solid #2563eb;">
+          <p style="font-weight:600;">Instruções ao Fornecedor:</p>
+          <ul style="margin-left:20px;">
+            <li>Enviar proposta detalhada, mencionando preços unitários e totais.</li>
+            <li>Informar condições de pagamento, prazo de entrega e validade da cotação.</li>
+            <li>Especificar garantias, frete e logística de entrega.</li>
+            <li>Enviar a resposta até a data limite especificada no campo <strong>Prazo de Entrega Desejado</strong>.</li>
+          </ul>
+        </div>
+
+        <!-- Botão -->
+        <button type="submit" aria-label="Enviar pedido de cotação para RM {{ r.id_req }}">
+          Enviar Pedido de Cotação
+        </button>
       </form>
     {% endfor %}
   {% else %}
-    <p style="color:#6b7280; font-size:1.1rem; margin-top:40px;">Nenhuma Requisição com status "Solicitação Aprovada" para cotação no momento.</p>
+    <p style="color:#6b7280; font-size:1.1rem; margin-top:40px;">
+      Nenhuma Requisição com status <strong>"Solicitação Aprovada"</strong> disponível para cotação no momento.
+    </p>
   {% endif %}
+
+
 
   <section style="margin-top: 60px; max-width: 800px;">
     <h2>Pedidos de Cotação Enviados</h2>

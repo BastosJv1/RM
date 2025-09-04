@@ -269,10 +269,11 @@ class Funcionario:
         self.email = email
 
 class Item:
-    def __init__(self, descricao, quantidade, anexo_filename=None):
+    def __init__(self, descricao, quantidade, anexo_filename=None, observacoes=None):
         self.descricao = descricao
         self.quantidade = quantidade
         self.anexo_filename = anexo_filename
+        self.observacoes = observacoes
 
 class Requisicao:
     def __init__(self, id_req, requisitante, itens, finalidade=""):
@@ -381,7 +382,7 @@ def carregar_requisicoes_db():
         itens_db = cur.fetchall()
         itens = []
         for d in itens_db:
-            i = Item(d[0], d[1], d[4])
+            i = Item(d[0], d[1], d[4] if len(d) > 4 else None)
             i.unidade_medida = d[2]
             i.especificacoes = d[3]
             itens.append(i)
@@ -893,6 +894,7 @@ agendamentos_viagens = []  # lista global para armazenar os agendamentos
 
 # lista temporária para armazenar os carros
 carros = []
+agendamento_viagens = []
 
 @app.route('/cadastrar_carro', methods=['POST'])
 def cadastrar_carro():
@@ -962,29 +964,46 @@ def excluir_carro(placa):
 
 @app.route("/agendamento_viagens", methods=["GET", "POST"])
 def agendamento_viagens():
+    global agendamentos_viagens
     if request.method == "POST":
         # Pega os dados do formulário
         motorista = request.form.get("motorista")
         veiculo = request.form.get("veiculo")
-        data_viagem = request.form.get("data_viagem")
-        status = request.form.get("status")
-        observacoes = request.form.get("observacoes")
-        
+        trechos = request.form.getlist("trecho[]")           # Lista de trechos
+        datas_viagem = request.form.getlist("data_viagem[]") # Lista de datas
+        horas_saida = request.form.getlist("hora_saida[]")   # Lista de horas
+        observacoes = request.form.getlist("observacoes[]")  # Lista de observações
+        passageiros = request.form.getlist("passageiro[]")   # Lista de passageiros
+        empresa = request.form.get("empresa")
+        prioridade = request.form.get("prioridade")
+        email = request.form.get("email")
+        status_viagem = "AGUARDANDO APROVAÇÃO"
+
         # Cria o agendamento
         agendamento = {
-            "id": len(agendamentos_viagens) + 1,
+            "id": len(agendamentos_viagens) + 1,  # Número sequencial automático
             "motorista": motorista,
             "veiculo": veiculo,
-            "data_viagem": data_viagem,
-            "status": status,
-            "observacoes": observacoes
+            "trechos": trechos,
+            "datas_viagem": datas_viagem,
+            "horas_saida": horas_saida,
+            "observacoes": observacoes,
+            "passageiros": passageiros,
+            "empresa": empresa,
+            "prioridade": prioridade,
+            "email": email,
+            "status_viagem": status_viagem
         }
         agendamentos_viagens.append(agendamento)
         flash(f"Agendamento {agendamento['id']} criado com sucesso!")
-        return redirect(url_for("controle_frota"))
+        return redirect(url_for("agendamento_viagens"))
 
     # GET
-    return render_template("agendamento_viagens.html", carros=carros, status_viagem=["AGUARDANDO", "EM ANDAMENTO", "CONCLUÍDA", "CANCELADA"])
+    proximo_id = len(agendamentos_viagens) + 1  # Número sequencial
+    return render_template("agendamento_viagens.html",
+                           carros=carros,
+                           status_viagem=["AGUARDANDO", "EM ANDAMENTO", "CONCLUÍDA", "CANCELADA"],
+                           proximo_rm=f"AV-{proximo_id}")  # Passa para o template
 
 
 @app.route("/controle_frota", methods=["GET", "POST"])
@@ -1014,6 +1033,11 @@ def controle_frota():
     )
 
 
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+
 @app.route("/pedidos_compras", methods=["GET", "POST"])
 def pedidos_compras():
     if not session.get("logado"):
@@ -1035,39 +1059,69 @@ def pedidos_compras():
 
         # Cria PDF em memória
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        largura, altura = A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
 
-        y = altura - 50
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, f"Pedido de Cotação - RM {rm_number}")
-        y -= 30
+        # Cria PDF executivo
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                rightMargin=40, leftMargin=40,
+                                topMargin=60, bottomMargin=40)
 
-        c.setFont("Helvetica", 12)
-        c.drawString(50, y, f"Requisitante: {rm_obj.requisitante}")
-        y -= 20
-        c.drawString(50, y, f"Fornecedores Selecionados: {', '.join(fornecedores_emails)}")
-        y -= 20
-        c.drawString(50, y, f"Prazo de Entrega Desejado: {prazo_entrega}")
-        y -= 20
-        c.drawString(50, y, f"Condições Comerciais: {condicoes}")
-        y -= 20
-        c.drawString(50, y, f"Observações: {observacoes}")
-        y -= 40
+        story = []
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name="Titulo", fontSize=16, alignment=1,
+                                spaceAfter=20, leading=20, fontName="Helvetica-Bold"))
+        styles.add(ParagraphStyle(name="SubTitulo", fontSize=12,
+                                spaceAfter=8, leading=14, fontName="Helvetica-Bold"))
+        styles.add(ParagraphStyle(name="CustomNormal", fontSize=11, leading=14))
 
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y, "Itens Solicitados:")
-        y -= 20
-        c.setFont("Helvetica", 11)
+        # Cabeçalho executivo
+        story.append(Paragraph(f"Pedido de Cotação - RM {rm_number}", styles["Titulo"]))
+        story.append(Paragraph(f"<b>Requisitante:</b> {rm_obj.requisitante}", styles["CustomNormal"]))
+        story.append(Paragraph(f"<b>Fornecedores Selecionados:</b> {', '.join(fornecedores_emails)}", styles["CustomNormal"]))
+        story.append(Paragraph(f"<b>Prazo de Entrega Desejado:</b> {prazo_entrega}", styles["CustomNormal"]))
+        story.append(Paragraph(f"<b>Condições Comerciais:</b> {condicoes}", styles["CustomNormal"]))
+        story.append(Paragraph(f"<b>Observações:</b> {observacoes}", styles["CustomNormal"]))
+        story.append(Spacer(1, 20))
+
+        # Instruções executivas
+        story.append(Paragraph("<b>Objetivo:</b> Obter propostas comerciais para aquisição dos itens listados, garantindo o melhor custo-benefício e condições de fornecimento para a empresa.", styles["CustomNormal"]))
+        story.append(Spacer(1, 20))
+
+        story.append(Paragraph("Instruções ao Fornecedor:", styles["SubTitulo"]))
+        story.append(Paragraph("<ul>"
+                            "<li>Enviar proposta detalhada com preços unitários e totais;</li>"
+                            "<li>Informar condições de pagamento, prazo de entrega e validade da proposta;</li>"
+                            "<li>Especificar garantias, frete e logística de entrega;</li>"
+                            "<li>Responder até a data limite especificada.</li>"
+                            "</ul>", styles["CustomNormal"]))
+        story.append(Spacer(1, 20))
+
+        # Tabela de itens
+        story.append(Paragraph("Itens Solicitados:", styles["SubTitulo"]))
+        tabela_dados = [["Qtd.", "Descrição", "Observações"]]
         for item in rm_obj.itens:
-            c.drawString(60, y, f"- {item.quantidade} x {item.descricao}")
-            y -= 18
-            if y < 80:
-                c.showPage()
-                y = altura - 50
+            tabela_dados.append([str(item.quantidade), item.descricao, item.observacoes or "—"])
 
-        c.showPage()
-        c.save()
+        tabela = Table(tabela_dados, colWidths=[60, 300, 150])
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#2563eb")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("ALIGN", (0,0), (-1,-1), "LEFT"),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("BOTTOMPADDING", (0,0), (-1,0), 10),
+            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+        ]))
+        story.append(tabela)
+
+        story.append(Spacer(1, 40))
+        story.append(Paragraph("Atenciosamente,", styles["CustomNormal"]))
+        story.append(Spacer(1, 30))
+        story.append(Paragraph("<b>Departamento de Compras</b>", styles["CustomNormal"]))
+
+        doc.build(story)
         buffer.seek(0)
 
         # Atualiza status
@@ -1080,12 +1134,14 @@ def pedidos_compras():
             mimetype="application/pdf"
         )
 
+    # GET
     return render_template(
         "pedidos_compras.html",
         rm_aprovadas=rm_aprovadas,
         fornecedores=fornecedores,
         pedidos_cotacao=pedidos_cotacao,
-        pagina_ativa="pedidos_compras"
+        pagina_ativa="pedidos_compras",
+        data_emissao=datetime.now()  # <-- Adiciona aqui também
     )
 
 if __name__ == '__main__':
