@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão da Frota</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100vh;
+      background-color: #1e3a8a;
+      color: white;
+      padding: 30px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      font-weight: 600;
+    }
+    #sidebar a {
+      color: white;
+      text-decoration: none;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: block;
+      transition: background-color 0.3s ease;
+    }
+    #sidebar a:hover,
+    #sidebar a.active {
+      background-color: #2563eb;
+    }
+
+    main {
+      margin-left: 260px;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #1e3a8a;
+      margin-bottom: 40px;
+    }
+
+    /* Cards */
+    .rm-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      padding: 20px 24px;
+      transition: transform 0.2s;
+    }
+    .rm-card:hover { transform: translateY(-2px); }
+
+    /* Form */
+    .rm-form .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 12px;
+    }
+    .rm-form .field { flex: 1 1 200px; display: flex; flex-direction: column; }
+    .rm-form label { font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+    .rm-form input, .rm-form select {
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .rm-form button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .rm-form button:hover { background-color: #1e40af; }
+
+    /* Tabela */
+    .table-container {
+      overflow-x: auto;
+      width: 100%;
+      border-radius: 12px;
+    }
+    table th, table td {
+      text-transform: uppercase; /* caixa alta */
+      white-space: nowrap; /* evita quebra de texto */
+    }
+
+    thead {
+      background: #f0f4ff;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+    }
+    tr:nth-child(even) { background: #f9fafb; }
+    .badge {
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .bg-success { background: #4ade80; color: #065f46; }
+    .bg-warning { background: #facc15; color: #92400e; }
+    .bg-secondary { background: #d1d5db; color: #374151; }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-danger:hover { background: #991b1b; }
+
+    @media (max-width: 900px) {
+      main { margin-left: 0; padding: 20px; }
+      .rm-form .field-group { flex-direction: column; }
+    }
+
+    /* Modal corporativo centralizado */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      padding: 30px 25px;
+      border-radius: 12px;
+      width: 600px;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+      position: relative;
+      transition: transform 0.2s ease-in-out;
+    }
+    .modal-content:hover { transform: translateY(-2px); }
+
+    .modal-content h2 {
+      color: #1e3a8a;
+      font-size: 1.5rem;
+      margin-bottom: 25px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+    }
+
+    .close {
+      position: absolute;
+      top: 15px; right: 20px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: #374151;
+    }
+
+    .btn-primary {
+      background-color: #1e3a8a;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+    .btn-primary:hover { background-color: #2563eb; }
+
+    .btn-secondary {
+      background-color: #d1d5db;
+      color: #374151;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+    .btn-secondary:hover { background-color: #9ca3af; }
+
+  </style>
+</head>
+<body>
+
+<div id="sidebar" role="navigation" aria-label="Menu principal">
+  <nav>
+    <div class="menu-section">
+      <h3>Setor de Compras</h3>
+      <a href="{{ url_for('controle') }}" class="{% if pagina_ativa == 'controle' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📅</span><span>Controle RM</span>
+      </a>
+      <a href="{{ url_for('pedidos_compras') }}" class="{% if pagina_ativa == 'pedidos_compras' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📋</span><span>Pedidos de Compras</span>
+      </a>
+      <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">🛒</span><span>OC</span>
+      </a>
+      <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📂</span><span>Buscar Arquivos</span>
+      </a>
+    </div>
+    <div class="menu-section">
+      <h3>Almoxarifado</h3>
+      <a href="{{ url_for('acompanhamento_entregas') }}"><span class="icon" aria-hidden="true">📦</span><span>Entregas</span></a>
+    </div>
+    <div class="menu-section">
+      <h3>Frota</h3>
+      <a href="{{ url_for('controle_frota') }}"><span class="icon" aria-hidden="true">📋</span><span>Agendamento de Viagens</span></a>
+      <a href="{{ url_for('frota_expedicao') }}"><span class="icon" aria-hidden="true">🚚</span><span>Expedição</span></a>
+      <a href="{{ url_for('frotas') }}"><span class="icon" aria-hidden="true">🛞</span><span>Gestão de Frotas</span></a>
+      </a>
+      </a>
+    </div>
+  </nav>
+</div>
+
+<main>
+  <h1>🚘 Gestão de Frota</h1>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-message">{{ messages[0] }}</div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Cadastro -->
+  <div class="rm-card">
+    <h2 style="margin-bottom:20px; color:#1e3a8a;">Cadastrar Novo Veículo</h2>
+    <form class="rm-form" method="POST" action="{{ url_for('cadastrar_carro') }}">
+      <div class="field-group">
+      <div class="field"><label>Placa</label><input type="text" name="placa" required></div>
+      <div class="field"><label>Marca</label><input type="text" name="marca" required></div>
+      <div class="field"><label>Modelo</label><input type="text" name="modelo" required></div>
+      <div class="field"><label>Versão</label><input type="text" name="versao"></div>
+      <div class="field"><label>Exercício</label><input type="text" name="exercicio"></div>
+
+    </div>
+
+    <div class="field-group">
+      <div class="field"><label>Ano Fabricação</label><input type="number" name="ano_fabricacao" required></div>
+      <div class="field"><label>Ano Modelo</label><input type="number" name="ano_modelo" required></div>
+      <div class="field"><label>Cor Predominante</label><input type="text" name="cor" required></div>
+      <div class="field"><label>Chassi</label><input type="text" name="chassi"></div>
+    </div>
+
+    <div class="field-group">
+      <div class="field"><label>Link do Documento</label><input type="text" name="link_doc"></div>
+      <div class="field"><label>Locadora</label><input type="text" name="locadora"></div>
+      <div class="field"><label>Nº Contrato Locação</label><input type="text" name="num_contrato_locacao"></div>
+      <div class="field"><label>Contrato</label><input type="text" name="contrato"></div>
+    </div>
+
+    <div class="field-group">
+      <div class="field"><label>Empresa</label><input type="text" name="empresa"></div>
+      <div class="field"><label>Rastreado (MOBI7)</label><select name="rastreado"><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+      <div class="field"><label>Ativo Desde</label><input type="date" name="ativo_desde"></div>
+      <div class="field"><label>Status</label>
+        <select name="status">
+          <option value="Ativo">Ativo</option>
+          <option value="Em Manutenção">Em Manutenção</option>
+          <option value="Inativo">Inativo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field"><label>Nº Cartão Combustível</label><input type="text" name="cartao_combustivel"></div>
+      <div class="field"><label>Nº Cartão Equipamento</label><input type="text" name="cartao_equipamento"></div>
+    </div>
+
+      <button type="submit">+ Cadastrar Veículo</button>
+    </form>
+  </div>
+
+  <!-- Lista -->
+  <div class="rm-card">
+    <h2 style="margin-bottom:20px; color:#1e3a8a;">📋 Veículos Cadastrados</h2>
+    {% if carros %}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>PLACA</th>
+            <th>EXERCÍCIO</th>
+            <th>ANO FABRICAÇÃO</th>
+            <th>ANO MODELO</th>
+            <th>MARCA | MODELO | VERSÃO</th>
+            <th>CHASSI</th>
+            <th>COR PREDOMINANTE</th>
+            <th>LINK DO DOCUMENTO</th>
+            <th>EMPRESA</th>
+            <th>RASTREADO (MOBI7)</th>
+            <th>ATIVO DESDE</th>
+            <th>STATUS</th>
+            <th>LOCADORA</th>
+            <th>NUMERO CONTRATO DE LOCAÇÃO</th>
+            <th>CONTRATO</th>
+            <th>Nº DO CARTÃO COMBUSTÍVEL</th>
+            <th>Nº DO CARTÃO EQUIPAMENTO</th>
+            <th>AÇÕES</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for carro in carros %}
+          <tr>
+            <td>{{ carro.placa|upper }}</td>
+            <td>{{ carro.exercicio|upper }}</td>
+            <td>{{ carro.ano_fabricacao }}</td>
+            <td>{{ carro.ano_modelo }}</td>
+            <td>{{ carro.marca }} | {{ carro.modelo }} | {{ carro.versao|upper }}</td>
+            <td>{{ carro.chassi|upper }}</td>
+            <td>{{ carro.cor|upper }}</td>
+            <td><a href="{{ carro.link_doc }}" target="_blank">DOCUMENTO</a></td>
+            <td>{{ carro.empresa|upper }}</td>
+            <td>{{ carro.rastreado|upper }}</td>
+            <td>{{ carro.ativo_desde }}</td>
+            <td>{{ carro.status|upper }}</td>
+            <td>{{ carro.locadora|upper }}</td>
+            <td>{{ carro.num_contrato_locacao|upper }}</td>
+            <td>{{ carro.contrato|upper }}</td>
+            <td>{{ carro.cartao_combustivel|upper }}</td>
+            <td>{{ carro.cartao_equipamento|upper }}</td>
+            <td>
+              <button type="button" class="btn btn-primary"
+                onclick="abrirModal('{{ carro.placa }}','{{ carro.exercicio }}','{{ carro.ano_fabricacao }}','{{ carro.ano_modelo }}','{{ carro.marca }}','{{ carro.modelo }}','{{ carro.versao }}','{{ carro.chassi }}','{{ carro.cor }}','{{ carro.link_doc }}','{{ carro.empresa }}','{{ carro.rastreado }}','{{ carro.ativo_desde }}','{{ carro.status }}','{{ carro.locadora }}','{{ carro.num_contrato_locacao }}','{{ carro.contrato }}','{{ carro.cartao_combustivel }}','{{ carro.cartao_equipamento }}')"
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted text-center">Nenhum veículo cadastrado ainda.</p>
+    {% endif %}
+  </div>
+
+
+  <!-- Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="charModal()">&times;</span>
+      <h2>Editar Veículo</h2>
+      <form id="editForm" method="POST">
+        <input type="hidden" name="placa" id="editPlaca">
+
+        <div class="field-group">
+          <div class="field"><label>Exercício</label><input type="text" name="exercicio" id="editExercicio"></div>
+          <div class="field"><label>Ano Fabricação</label><input type="number" name="ano_fabricacao" id="editAnoFabricacao"></div>
+          <div class="field"><label>Ano Modelo</label><input type="number" name="ano_modelo" id="editAnoModelo"></div>
+          <div class="field"><label>Marca</label><input type="text" name="marca" id="editMarca"></div>
+          <div class="field"><label>Modelo</label><input type="text" name="modelo" id="editModelo"></div>
+          <div class="field"><label>Versão</label><input type="text" name="versao" id="editVersao"></div>
+
+        </div>
+        <div class="field-group">
+          <div class="field"><label>Chassi</label><input type="text" name="chassi" id="editChassi"></div>
+          <div class="field"><label>Cor Predominante</label><input type="text" name="cor_predominante" id="editCorPredominante"></div>
+          <div class="field"><label>Link do Documento</label><input type="url" name="link_documento" id="editLinkDocumento"></div>
+          <div class="field"><label>Empresa</label><input type="text" name="empresa" id="editEmpresa"></div>
+        </div>
+        <div class="field-group">
+          <div class="field"><label>Rastreado (MOBI7)</label><input type="text" name="rastreamento" id="editRastreamento"></div>
+          <div class="field"><label>Ativo Desde</label><input type="date" name="ativo_desde" id="editAtivoDesde"></div>
+          <div class="field"><label>Status</label>
+            <select name="status" id="editStatus">
+              <option value="Ativo">Ativo</option>
+              <option value="Em Manutenção">Em Manutenção</option>
+              <option value="Inativo">Inativo</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field"><label>Locadora</label><input type="text" name="locadora" id="editLocadora"></div>
+          <div class="field"><label>Número Contrato de Locação</label><input type="text" name="numero_contrato_locacao" id="editNumeroContratoLocacao"></div>
+          <div class="field"><label>Contrato</label><input type="text" name="contrato" id="editContrato"></div>
+          <div class="field"><label>Nº do Cartão Combustível</label><input type="text" name="cartao_combustivel" id="editCartaoCombustivel"></div>
+          <div class="field"><label>Nº do Cartão Equipamento</label><input type="text" name="cartao_equipamento" id="editCartaoEquipamento"></div>
+        </div>
+
+        <div style="text-align:right; margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right:10px;">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>
+
+<script>
+function abrirModal(placa, exercicio, ano_fab, ano_mod, marca, modelo, versao, chassi, cor_pred, link_doc, empresa, rastreamento, ativo_desde, status, locadora, num_contrato, contrato, cartao_comb, cartao_equip) {
+  document.getElementById("editPlaca").value = placa;
+  document.getElementById("editExercicio").value = exercicio;
+  document.getElementById("editAnoFabricacao").value = ano_fab;
+  document.getElementById("editAnoModelo").value = ano_mod;
+  document.getElementById("editMarca").value = marca;
+  document.getElementById("editModelo").value = modelo;
+  document.getElementById("editVersao").value = versao;
+  document.getElementById("editChassi").value = chassi;
+  document.getElementById("editCorPredominante").value = cor_pred;
+  document.getElementById("editLinkDocumento").value = link_doc;
+  document.getElementById("editEmpresa").value = empresa;
+  document.getElementById("editRastreamento").value = rastreamento;
+  document.getElementById("editAtivoDesde").value = ativo_desde;
+  document.getElementById("editStatus").value = status;
+  document.getElementById("editLocadora").value = locadora;
+  document.getElementById("editNumeroContratoLocacao").value = num_contrato;
+  document.getElementById("editContrato").value = contrato;
+  document.getElementById("editCartaoCombustivel").value = cartao_comb;
+  document.getElementById("editCartaoEquipamento").value = cartao_equip;
+
+  document.getElementById("editForm").action = "/editar_carro/" + placa;
+  document.getElementById("editModal").style.display = "flex";
+}
+
+
+function fecharModal() {
+  document.getElementById("editModal").style.display = "none";
+}
+
+// Fecha modal ao clicar fora do conteúdo
+window.onclick = function(event) {
+  const modal = document.getElementById("editModal");
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+};
+</script>
+
+</body>
+</html>

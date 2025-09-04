@@ -123,18 +123,30 @@
   <nav>
     <div class="menu-section">
       <h3>Setor de Compras</h3>
-      <a href="{{ url_for('controle') }}" class="{% if pagina_ativa == 'controle' %}active{% endif %}">📅 Controle RM</a>
-      <a href="{{ url_for('pedidos_compras') }}" class="{% if pagina_ativa == 'pedidos_compras' %}active{% endif %}">📋 Pedidos de Compras</a>
-      <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">🛒 OC</a>
-      <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">📂 Buscar Arquivos</a>
+      <a href="{{ url_for('controle') }}" class="{% if pagina_ativa == 'controle' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📅</span><span>Controle RM</span>
+      </a>
+      <a href="{{ url_for('pedidos_compras') }}" class="{% if pagina_ativa == 'pedidos_compras' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📋</span><span>Pedidos de Compras</span>
+      </a>
+      <a href="{{ url_for('oc') }}" class="{% if pagina_ativa == 'oc' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">🛒</span><span>OC</span>
+      </a>
+      <a href="{{ url_for('busca_arquivos') }}" class="{% if pagina_ativa == 'busca_arquivos' %}active{% endif %}">
+        <span class="icon" aria-hidden="true">📂</span><span>Buscar Arquivos</span>
+      </a>
     </div>
     <div class="menu-section">
       <h3>Almoxarifado</h3>
-      <a href="{{ url_for('acompanhamento_entregas') }}">📦 Entregas</a>
+      <a href="{{ url_for('acompanhamento_entregas') }}"><span class="icon" aria-hidden="true">📦</span><span>Entregas</span></a>
     </div>
     <div class="menu-section">
       <h3>Frota</h3>
-      <a href="{{ url_for('frota_expedicao') }}">🚚 Expedição</a>
+      <a href="{{ url_for('controle_frota') }}"><span class="icon" aria-hidden="true">📋</span><span>Agendamento de Viagens</span></a>
+      <a href="{{ url_for('frota_expedicao') }}"><span class="icon" aria-hidden="true">🚚</span><span>Expedição</span></a>
+      <a href="{{ url_for('frotas') }}"><span class="icon" aria-hidden="true">🛞</span><span>Gestão de Frotas</span></a>
+      </a>
+      </a>
     </div>
   </nav>
 </div>

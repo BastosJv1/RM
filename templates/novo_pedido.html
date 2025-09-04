@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nova Solicitação</title>
+<title>Requisição de Materiais</title>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -170,8 +170,13 @@
 </style>
 </head>
 <body>
-<a href="{{ url_for('home') }}" class="back-button" style="text-decoration:none; padding:8px 16px; background:#2563eb; color:#fff; border-radius:6px; display:inline-block; cursor:pointer;">← Voltar</a>
-<h1>Nova Solicitação</h1>
+<div style="display:flex; justify-content:center; gap:15px; margin-bottom:30px;">
+  <a href="{{ url_for('home') }}" class="back-button" style="text-decoration:none; padding:10px 18px; background:#2563eb; color:#fff; border-radius:8px; display:inline-block; cursor:pointer; font-weight:600;">← Voltar</a>
+
+  <a href="{{ url_for('agendamento_viagens') }}" class="go-agendamento" style="text-decoration:none; padding:10px 18px; background:#10b981; color:#fff; border-radius:8px; display:inline-block; cursor:pointer; font-weight:600;">Agendar Viagens</a>
+</div>
+
+<h1>Requisição de Materiais</h1>
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}

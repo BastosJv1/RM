@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from datetime import datetime, timedelta
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from datetime import datetime
 import os
 import json
 import unicodedata
@@ -10,11 +10,10 @@ import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image, ImageFilter, ImageOps
 import random
-from flask import send_file
+import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-import io
-
+import psycopg2
 
 app = Flask(__name__)
 app.secret_key = '04031998'
@@ -24,15 +23,95 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+ordens_de_compra = []  # Armazenamento simples para OCs
 
+DB_CONFIG = {
+    "host": "dpg-d2sr8aodl3ps73ek9m5g-a.oregon-postgres.render.com",
+    "port": 5432,
+    "dbname": "sistema3r",
+    "user": "sistema3r_user",
+    "password": "XXFxreI1QJ0NbAqrMSVUcPiYa62rEXHH"
+}
+
+def get_db_connection():
+    conn = psycopg2.connect(
+        host=DB_CONFIG["host"],
+        port=DB_CONFIG["port"],
+        dbname=DB_CONFIG["dbname"],
+        user=DB_CONFIG["user"],
+        password=DB_CONFIG["password"]
+    )
+    return conn
+
+# Criação das tabelas (executar uma vez)
+def criar_tabelas():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS requisicoes (
+        id_req SERIAL PRIMARY KEY,
+        requisitante TEXT,
+        finalidade TEXT,
+        centro_custo TEXT,
+        status TEXT,
+        comprador_responsavel TEXT,
+        data_conclusao TEXT,
+        observacoes_almoxarifado TEXT,
+        numero_oc TEXT
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS itens_requisicao (
+        id SERIAL PRIMARY KEY,
+        id_req INTEGER REFERENCES requisicoes(id_req),
+        descricao TEXT,
+        quantidade INTEGER,
+        unidade_medida TEXT,
+        especificacoes TEXT,
+        anexo_filename TEXT
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ordens_de_compra (
+        id SERIAL PRIMARY KEY,
+        numero_oc TEXT,
+        descricao TEXT,
+        quantidade TEXT,
+        preco_unitario NUMERIC,
+        data_solicitacao TEXT,
+        descricao_geral TEXT,
+        categoria TEXT,
+        centro_custo TEXT,
+        fornecedor TEXT,
+        previsao_entrega TEXT,
+        local_entrega TEXT,
+        baixa BOOLEAN,
+        obs TEXT,
+        condicoes_entrega TEXT,
+        tipo_frete TEXT,
+        obs_almoxarifado TEXT,
+        status_entrega TEXT,
+        nf TEXT,
+        natureza_nf TEXT,
+        valor_inicial_proposta NUMERIC,
+        valor_final_proposta NUMERIC,
+        link_nf TEXT
+    );
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+criar_tabelas()
+
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 PASTA_RAIZ = r"\\servidor\12- SETOR DE COMPRAS"
 INDICE_FILENAME = 'indice_documentos.json'
 INDICE_PATH = os.path.join(PASTA_RAIZ, INDICE_FILENAME)
 
-
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 POPPLER_PATH = r'C:\Program Files\poppler-25.07.0\Library\bin'
-
 
 USUARIOS = {
     "BastosJv": "040398",
@@ -40,113 +119,58 @@ USUARIOS = {
     "usuario3": "senha3",
     "usuario4": "senha4",
 }
-
-
-ordens_de_compra = []  # Armazenamento simples para OCs
-
-
+    
 def pre_process_image(img):
-    img = ImageOps.grayscale(img)
-    img = ImageOps.autocontrast(img)
-    img = img.filter(ImageFilter.SHARPEN)
-    return img
-
+        img = ImageOps.grayscale(img)
+        img = ImageOps.autocontrast(img)
+        img = img.filter(ImageFilter.SHARPEN)
+        return img
 
 def extrair_texto_pdf(caminho):
-    texto = ""
-    try:
-        pdf = fitz.open(caminho)
-        for pagina in pdf:
-            texto += pagina.get_text()
-        if texto.strip() == "":
-            imagens = convert_from_path(caminho, dpi=300, poppler_path=POPPLER_PATH)
-            ocr_texto = []
-            for img in imagens:
-                img = pre_process_image(img)
-                custom_config = r'--oem 3 --psm 6'
-                ocr_texto.append(pytesseract.image_to_string(img, lang="por+eng", config=custom_config))
-            texto = "\n".join(ocr_texto)
-    except Exception as e:
-        print(f"Erro ao ler PDF {caminho}: {e}")
-    return texto
-
+        texto = ""
+        try:
+            pdf = fitz.open(caminho)
+            for pagina in pdf:
+                texto += pagina.get_text()
+            if texto.strip() == "":
+                imagens = convert_from_path(caminho, dpi=300, poppler_path=POPPLER_PATH)
+                ocr_texto = [pytesseract.image_to_string(pre_process_image(img), lang="por+eng", config=r'--oem 3 --psm 6') for img in imagens]
+                texto = "\n".join(ocr_texto)
+        except Exception as e:
+            print(f"Erro ao ler PDF {caminho}: {e}")
+        return texto
 
 def extrair_texto_docx(caminho):
-    texto = ""
-    try:
-        doc = docx.Document(caminho)
-        for p in doc.paragraphs:
-            texto += p.text + "\n"
-    except Exception as e:
-        print(f"Erro ao ler DOCX {caminho}: {e}")
-    return texto
-
+        texto = ""
+        try:
+            doc = docx.Document(caminho)
+            for p in doc.paragraphs:
+                texto += p.text + "\n"
+        except Exception as e:
+            print(f"Erro ao ler DOCX {caminho}: {e}")
+        return texto
 
 def extrair_texto_txt(caminho):
-    texto = ""
-    try:
-        with open(caminho, 'r', encoding='utf-8', errors='ignore') as f:
-            texto = f.read()
-    except Exception as e:
-        print(f"Erro ao ler TXT {caminho}: {e}")
-    return texto
-
+        texto = ""
+        try:
+            with open(caminho, 'r', encoding='utf-8', errors='ignore') as f:
+                texto = f.read()
+        except Exception as e:
+            print(f"Erro ao ler TXT {caminho}: {e}")
+        return texto
 
 def extrair_texto_imagem(caminho):
-    texto = ""
-    try:
-        img = Image.open(caminho)
-        img = pre_process_image(img)
-        custom_config = r'--oem 3 --psm 6'
-        texto = pytesseract.image_to_string(img, lang="por+eng", config=custom_config)
-    except Exception as e:
-        print(f"Erro ao ler imagem {caminho}: {e}")
-    return texto
-
-
-def criar_indice(pasta_raiz, arquivo_json=INDICE_FILENAME, max_preview_length=1000):
-    extensoes_suportadas = ['.pdf', '.docx', '.txt', '.jpg', '.jpeg', '.png']
-    indice = []
-    print("Iniciando criação do índice de documentos com OCR.")
-    for root, dirs, files in os.walk(pasta_raiz):
-        for file in files:
-            if file.startswith("~$"):
-                continue
-            nome, ext = os.path.splitext(file.lower())
-            if ext in extensoes_suportadas:
-                caminho_completo = os.path.join(root, file)
-                texto_extraido = ""
-                if ext == '.pdf':
-                    texto_extraido = extrair_texto_pdf(caminho_completo)
-                elif ext == '.docx':
-                    texto_extraido = extrair_texto_docx(caminho_completo)
-                elif ext == '.txt':
-                    texto_extraido = extrair_texto_txt(caminho_completo)
-                elif ext in ['.jpg', '.jpeg', '.png']:
-                    texto_extraido = extrair_texto_imagem(caminho_completo)
-                else:
-                    continue
-                texto_preview = texto_extraido[:max_preview_length] if len(texto_extraido) > max_preview_length else texto_extraido
-                indice.append({
-                    "caminho": caminho_completo,
-                    "nome": file,
-                    "ext": ext,
-                    "texto": texto_preview
-                })
-    caminho_json = os.path.join(pasta_raiz, arquivo_json)
-    try:
-        with open(caminho_json, 'w', encoding='utf-8') as f:
-            json.dump(indice, f, ensure_ascii=False, indent=4)
-        print(f"Índice criado com {len(indice)} arquivos, salvo em: {caminho_json}")
-    except Exception as e:
-        print(f"Não foi possível salvar índice em {caminho_json}: {e}")
-    return indice
-
+        texto = ""
+        try:
+            img = Image.open(caminho)
+            texto = pytesseract.image_to_string(pre_process_image(img), lang="por+eng", config=r'--oem 3 --psm 6')
+        except Exception as e:
+            print(f"Erro ao ler imagem {caminho}: {e}")
+        return texto
 
 def normalizar_texto(texto):
-    nfkd = unicodedata.normalize('NFKD', texto)
-    texto_sem_acentos = ''.join([c for c in nfkd if not unicodedata.combining(c)])
-    return texto_sem_acentos.lower()
+        nfkd = unicodedata.normalize('NFKD', texto)
+        return ''.join([c for c in nfkd if not unicodedata.combining(c)]).lower()
 
 
 if not os.path.exists(INDICE_PATH):
@@ -244,13 +268,11 @@ class Funcionario:
         self.nome = nome
         self.email = email
 
-
 class Item:
     def __init__(self, descricao, quantidade, anexo_filename=None):
         self.descricao = descricao
         self.quantidade = quantidade
         self.anexo_filename = anexo_filename
-
 
 class Requisicao:
     def __init__(self, id_req, requisitante, itens, finalidade=""):
@@ -274,12 +296,67 @@ class Requisicao:
     def atualizar_status(self, novo_status):
         self.status = novo_status
         self.historia_status.append((novo_status, datetime.now()))
-
+        # Atualiza no banco
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE requisicoes SET status=%s WHERE id_req=%s", (novo_status, self.id_req))
+        conn.commit()
+        cur.close()
+        conn.close()
 
 funcionarios = [
     Funcionario("Alice Silva", "alice@empresa.com"),
     Funcionario("Bruno Costa", "bruno@empresa.com")
 ]
+
+def salvar_requisicao_db(requisicao: Requisicao):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO requisicoes (id_req, requisitante, finalidade, status, centro_custo)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (id_req) DO NOTHING;
+    """, (requisicao.id_req, requisicao.requisitante, requisicao.finalidade, requisicao.status, requisicao.centro_custo))
+    for item in requisicao.itens:
+        cur.execute("""
+            INSERT INTO itens_requisicao (id_req, descricao, quantidade, unidade_medida, especificacoes, anexo_filename)
+            VALUES (%s, %s, %s, %s, %s, %s);
+        """, (requisicao.id_req, item.descricao, item.quantidade, getattr(item, "unidade_medida", ""), getattr(item, "especificacoes", ""), item.anexo_filename))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def carregar_requisicoes_db():
+    requisicoes_lista = []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id_req, requisitante, finalidade, centro_custo, status, comprador_responsavel, data_conclusao, observacoes_almoxarifado, numero_oc FROM requisicoes;")
+    linhas = cur.fetchall()
+    for linha in linhas:
+        id_req, requisitante, finalidade, centro_custo, status, comprador_responsavel, data_conclusao, obs_alm, numero_oc = linha
+        cur.execute("SELECT descricao, quantidade, unidade_medida, especificacoes, anexo_filename FROM itens_requisicao WHERE id_req=%s", (id_req,))
+        itens_db = cur.fetchall()
+        itens = []
+        for d in itens_db:
+            i = Item(d[0], d[1], d[4])
+            i.unidade_medida = d[2]
+            i.especificacoes = d[3]
+            itens.append(i)
+        r = Requisicao(id_req, requisitante, itens, finalidade)
+        r.centro_custo = centro_custo
+        r.status = status
+        r.comprador_responsavel = comprador_responsavel
+        r.data_conclusao = data_conclusao
+        r.observacoes_almoxarifado = obs_alm
+        r.numero_oc = numero_oc
+        requisicoes_lista.append(r)
+    cur.close()
+    conn.close()
+    return requisicoes_lista
+
+# Carrega requisicoes ao iniciar app
+requisicoes = carregar_requisicoes_db()
+ordens_de_compra = []  # Você pode migrar depois para tabela OC
 
 requisicoes = []
 
@@ -366,7 +443,7 @@ def controle():
 
     if request.method == "POST":
         rm = request.form.get("rm")
-        req = next((r for r in requisicoes if str(r.id_req) == rm), None)
+        req = next((r for r in requisicoes if str(r.id_req) == str(rm)), None)
         if req:
             req.status = request.form.get("status_solicitacao", req.status)
             req.centro_custo = request.form.get("centro_custo", req.centro_custo)
@@ -466,27 +543,26 @@ def oc():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        numero_oc = request.form.get("numero_oc")  # vem oculto do form
+        numero_oc = request.form.get("numero_oc")  # número da OC
         data_solicitacao = request.form.get("data_solicitacao")
         descricao_geral = request.form.get("descricao_geral")
         dados = request.form.to_dict(flat=False)
-        descricoes = dados.get('descricao[]', [])
-        quantidades = dados.get('quantidade[]', [])
-        precos_unitarios = dados.get('preco_unitario[]', [])
-
-        # 🔹 Vínculo da OC com a RM
-        rm_referencia = request.form.get("rm_referencia")  # campo hidden vindo do oc.html
+        descricoes = dados.get("descricao[]", [])
+        quantidades = dados.get("quantidade[]", [])
+        precos_unitarios = dados.get("preco_unitario[]", [])
+        
+        # Vínculo da OC com a RM
+        rm_referencia = request.form.get("rm_referencia")
         if rm_referencia:
-            rm_relacionada = next((r for r in requisicoes if str(r.id_req) == str(rm_referencia)), None)
-            if rm_relacionada:
-                rm_relacionada.numero_oc = numero_oc
-
+            rm_obj = next((r for r in requisicoes if str(r.id_req) == str(rm_referencia)), None)
+            if rm_obj:
+                rm_obj.numero_oc = numero_oc
 
         for i in range(len(descricoes)):
             preco_str = precos_unitarios[i] if i < len(precos_unitarios) else "R$ 0,00"
             preco_num = 0.0
             try:
-                preco_num = float(preco_str.replace('R$', '').replace('.', '').replace(',', '.').strip())
+                preco_num = float(preco_str.replace("R$", "").replace(".", "").replace(",", ".").strip())
             except:
                 pass
 
@@ -502,7 +578,7 @@ def oc():
                 "fornecedor": dados.get("fornecedor", [""])[0],
                 "previsao_entrega": dados.get("previsao_entrega", [""])[0],
                 "local_entrega": dados.get("local_entrega", [""])[0],
-                "baixa": False,  # Baixa do Almoxarifado.
+                "baixa": False,
                 "obs": dados.get("obs", [""])[0],
                 "condicoes_entrega": dados.get("condicoes_entrega", [""])[0],
                 "tipo_frete": dados.get("tipo_frete", [""])[0],
@@ -517,10 +593,9 @@ def oc():
 
             ordens_de_compra.append(item)
 
-        flash(f"Ordem de Compra {numero_oc} criada com {len(descricoes)} itens.")
+        flash(f"Ordem de Compra {numero_oc} criada com {len(descricoes)} itens.", "success")
         return redirect(url_for("oc"))
 
-    # Gera número novo toda vez que abre o form
     numero_oc = gerar_numero_oc()
     return render_template("oc.html", numero_oc=numero_oc, ordens_de_compra=ordens_de_compra)
 
@@ -530,14 +605,12 @@ def lista_ocs():
     if not session.get("logado"):
         return redirect(url_for("login"))
 
-    # Ordena as OCs pelo número
     ordens_ordenadas = sorted(ordens_de_compra, key=lambda x: x['numero_oc'])
     return render_template("lista_ocs.html", ordens_de_compra=ordens_ordenadas)
 
 def gerar_numero_oc():
     ano = datetime.now().year
     prefixo = f"OC-{ano}-"
-    # Extrai números já existentes, remove prefixo e pega número sequencial máximo
     numeros_existentes = [
         int(oc['numero_oc'].replace(prefixo, ''))
         for oc in ordens_de_compra
@@ -762,6 +835,136 @@ from flask import send_file
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
+
+# Frota da Empresa
+@app.route('/frotas')
+def frotas():
+    return render_template("frotas.html", carros=carros, pagina_ativa="frotas")
+
+agendamentos_viagens = []  # lista global para armazenar os agendamentos
+
+# lista temporária para armazenar os carros
+carros = []
+
+@app.route('/cadastrar_carro', methods=['POST'])
+def cadastrar_carro():
+    placa = request.form.get("placa")
+    marca = request.form.get("marca")
+    modelo = request.form.get("modelo")
+    ano = request.form.get("ano")
+    cor = request.form.get("cor")
+    setor = request.form.get("setor")
+    status = request.form.get("status")
+
+    carro = {
+        "placa": placa,
+        "marca": marca,
+        "modelo": modelo,
+        "versao": request.form.get("versao"),
+        "exercicio": request.form.get("exercicio"),
+        "ano_fabricacao": request.form.get("ano_fabricacao"),
+        "ano_modelo": request.form.get("ano_modelo"),
+        "cor": cor,
+        "chassi": request.form.get("chassi"),
+        "link_doc": request.form.get("link_doc"),
+        "locadora": request.form.get("locadora"),
+        "num_contrato_locacao": request.form.get("num_contrato_locacao"),
+        "contrato": request.form.get("contrato"),
+        "empresa": request.form.get("empresa"),
+        "rastreado": request.form.get("rastreado"),
+        "ativo_desde": request.form.get("ativo_desde"),
+        "status": status,
+        "cartao_combustivel": request.form.get("cartao_combustivel"),
+        "cartao_equipamento": request.form.get("cartao_equipamento")
+    }
+
+
+    carros.append(carro)  # salva na lista
+
+    flash(f"Veículo {placa} cadastrado com sucesso!", "success")
+    return redirect(url_for("frotas"))
+
+@app.route('/editar_carro/<placa>', methods=['GET', 'POST'])
+def editar_carro(placa):
+    carro = next((c for c in carros if c["placa"] == placa), None)
+    if not carro:
+        flash("Carro não encontrado!", "danger")
+        return redirect(url_for("frotas"))
+
+    if request.method == 'POST':
+        carro["marca"] = request.form.get("marca")
+        carro["modelo"] = request.form.get("modelo")
+        carro["ano"] = request.form.get("ano")
+        carro["cor"] = request.form.get("cor")
+        carro["setor"] = request.form.get("setor")
+        carro["status"] = request.form.get("status")
+        flash("Carro atualizado com sucesso!", "success")
+        return redirect(url_for("frotas"))
+
+    return render_template("editar_carro.html", carro=carro)
+
+
+@app.route('/excluir_carro/<placa>', methods=['POST'])
+def excluir_carro(placa):
+    global carros
+    carros = [c for c in carros if c["placa"] != placa]
+    flash(f"Veículo {placa} removido com sucesso!", "success")
+    return redirect(url_for("frotas"))
+
+
+@app.route("/agendamento_viagens", methods=["GET", "POST"])
+def agendamento_viagens():
+    if request.method == "POST":
+        # Pega os dados do formulário
+        motorista = request.form.get("motorista")
+        veiculo = request.form.get("veiculo")
+        data_viagem = request.form.get("data_viagem")
+        status = request.form.get("status")
+        observacoes = request.form.get("observacoes")
+        
+        # Cria o agendamento
+        agendamento = {
+            "id": len(agendamentos_viagens) + 1,
+            "motorista": motorista,
+            "veiculo": veiculo,
+            "data_viagem": data_viagem,
+            "status": status,
+            "observacoes": observacoes
+        }
+        agendamentos_viagens.append(agendamento)
+        flash(f"Agendamento {agendamento['id']} criado com sucesso!")
+        return redirect(url_for("controle_frota"))
+
+    # GET
+    return render_template("agendamento_viagens.html", carros=carros, status_viagem=["AGUARDANDO", "EM ANDAMENTO", "CONCLUÍDA", "CANCELADA"])
+
+
+@app.route("/controle_frota", methods=["GET", "POST"])
+def controle_frota():
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        agendamento_id = request.form.get("agendamento_id")
+        agendamento = next((a for a in agendamentos_viagens if str(a['id']) == agendamento_id), None)
+        if agendamento:
+            agendamento['motorista'] = request.form.get("motorista", agendamento['motorista'])
+            agendamento['veiculo'] = request.form.get("veiculo", agendamento['veiculo'])
+            agendamento['data_viagem'] = request.form.get("data_viagem", agendamento['data_viagem'])
+            agendamento['status'] = request.form.get("status", agendamento['status'])
+            agendamento['observacoes'] = request.form.get("observacoes", agendamento['observacoes'])
+        flash(f"Agendamento {agendamento_id} atualizado com sucesso!")
+        return redirect(url_for("controle_frota"))
+
+    # Status possíveis da viagem
+    status_viagem = ["AGUARDANDO", "EM ANDAMENTO", "CONCLUÍDA", "CANCELADA"]
+
+    return render_template(
+        "controle_frota.html",
+        agendamentos=agendamentos_viagens,
+        status_viagem=status_viagem
+    )
+
 
 @app.route("/pedidos_compras", methods=["GET", "POST"])
 def pedidos_compras():

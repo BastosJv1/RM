@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Controle de Solicitações</title>
+  <title>Controle de Viagens</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -37,9 +37,7 @@
       transition: background-color 0.3s ease;
     }
     #sidebar a:hover,
-    #sidebar a.active {
-      background-color: #2563eb;
-    }
+    #sidebar a.active { background-color: #2563eb; }
     
     main {
       margin-left: 260px;
@@ -47,7 +45,6 @@
     }
     h1 { text-align: center; color: #1e3a8a; margin-bottom: 40px; }
 
-    /* Flash message */
     .flash-message {
       position: fixed;
       top: 20px;
@@ -61,8 +58,7 @@
       z-index: 1000;
     }
 
-    /* Cards de RM */
-    .rm-card {
+    .viagem-card {
       background: white;
       border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -70,52 +66,42 @@
       padding: 16px 24px;
       transition: transform 0.2s;
     }
-    .rm-card:hover { transform: translateY(-2px); }
+    .viagem-card:hover { transform: translateY(-2px); }
     
-    .rm-header {
+    .viagem-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
     }
-    .rm-header strong { font-size: 1.1rem; color: #1d4ed8; }
-    .rm-header span { font-size: 0.95rem; color: #2563eb; font-weight: 600; }
+    .viagem-header strong { font-size: 1.1rem; color: #1d4ed8; }
+    .viagem-header span { font-size: 0.95rem; color: #2563eb; font-weight: 600; }
 
-    .rm-details {
+    .viagem-details {
       margin-top: 12px;
       display: none;
       border-top: 1px solid #cbd5e1;
       padding-top: 12px;
     }
-    .rm-card.active .rm-details { display: block; }
+    .viagem-card.active .viagem-details { display: block; }
 
-    .items-list {
-      background: #f0f4ff;
-      border-radius: 12px;
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      font-size: 0.95rem;
-      max-height: 140px;
-      overflow-y: auto;
-    }
-
-    .rm-form .field-group {
+    .viagem-form .field-group {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
       margin-bottom: 12px;
     }
-    .rm-form .field { flex: 1 1 200px; display: flex; flex-direction: column; }
-    .rm-form label { font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
-    .rm-form input, .rm-form select, .rm-form textarea {
+    .viagem-form .field { flex: 1 1 200px; display: flex; flex-direction: column; }
+    .viagem-form label { font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+    .viagem-form input, .viagem-form select, .viagem-form textarea {
       border-radius: 12px;
       border: 1px solid #cbd5e1;
       padding: 8px 12px;
       font-size: 0.95rem;
       font-family: inherit;
     }
-    .rm-form textarea { resize: vertical; min-height: 60px; }
-    .rm-form button {
+    .viagem-form textarea { resize: vertical; min-height: 60px; }
+    .viagem-form button {
       background-color: #2563eb;
       color: white;
       border: none;
@@ -125,16 +111,15 @@
       font-weight: 700;
       margin-top: 10px;
     }
-    .rm-form button:hover { background-color: #1e40af; }
+    .viagem-form button:hover { background-color: #1e40af; }
 
     @media (max-width: 900px) {
       main { margin-left: 0; padding: 20px; }
-      .rm-form .field-group { flex-direction: column; }
+      .viagem-form .field-group { flex-direction: column; }
     }
   </style>
 </head>
 <body>
-  
 <div id="sidebar" role="navigation" aria-label="Menu principal">
   <nav>
     <div class="menu-section">
@@ -174,104 +159,56 @@
         ← Voltar
     </button>
   </div>  
-  <h1>Controle das Solicitações</h1>
+  <h1>Controle de Agendamentos de Viagens</h1>
+
   {% with messages = get_flashed_messages() %}
     {% if messages %}
       <div class="flash-message">{{ messages[0] }}</div>
     {% endif %}
   {% endwith %}
 
-{% set status_emojis = {
-  "AGUARDANDO APROVAÇÃO": "⏳",
-  "SOLICITAÇÃO APROVADA": "✅",
-  "SOLICITAÇÃO PARCIALMENTE AUTORIZADA": "🟡",
-  "NÃO APROVADA": "❌",
-  "APENAS COTAÇÃO": "📑",
-  "COMPRA EFETUADA": "🛒",
-  "EM EXPEDIÇÃO": "🚚",
-  "PEDIDO ENTREGUE": "📦",
-  "PEDIDO DUPLICADO": "🔁",
-  "PEDIDO CANCELADO": "🚫"
-} %}
+  {% set status_emojis = {
+    "AGUARDANDO APROVAÇÃO": "⏳",
+    "APROVADA": "✅",
+    "EM ANDAMENTO": "🚚",
+    "CONCLUÍDA": "📦",
+    "CANCELADA": "🚫"
+  } %}
 
-  {% for r in requisicoes %}
-  <div class="rm-card" tabindex="0" aria-expanded="false">
-    <div class="rm-header" onclick="toggleDetails(this)">
-      <strong>
-        {{ status_emojis[r.status] }} RM {{ r.id_req }} - {{ r.requisitante }}
-      </strong>
-      <span>Itens: {{ r.itens|length }} ▸</span>
+  {% for v in agendamentos %}
+  <div class="viagem-card" tabindex="0" aria-expanded="false">
+    <div class="viagem-header" onclick="toggleDetails(this)">
+        <strong>{{ status_emojis[v.status] }} Viagem {{ v.id }} - {{ v.motorista }}</strong>
+        <span>Veículo: {{ v.veiculo }} ▸</span>
     </div>
-    
-    <div class="rm-details">
-      <form class="rm-form" method="POST" action="{{ url_for('controle') }}">
-        <input type="hidden" name="rm" value="{{ r.id_req }}">
-        
-        <div class="items-list">
-          {% for item in r.itens %}
-            <p>{{ item.quantidade }} x {{ item.descricao }} ({{ item.unidade_medida }})</p>
-          {% endfor %}
-        </div>
-
+    <div class="viagem-details">
+        <form class="viagem-form" method="POST" action="{{ url_for('controle_frota') }}">
+        <input type="hidden" name="agendamento_id" value="{{ v.id }}">
         <div class="field-group">
-          <div class="field">
-            <label for="especificacoes-{{ r.id_req }}">Especificações Técnicas</label>
-            <textarea id="especificacoes-{{ r.id_req }}" name="especificacoes" readonly>{{ r.itens|map(attribute='especificacoes')|join(' ') }}</textarea>
-          </div>
-          <div class="field">
-            <label for="centro_custo-{{ r.id_req }}">Centro de Custo</label>
-            <input type="text" id="centro_custo-{{ r.id_req }}" name="centro_custo" value="{{ r.centro_custo }}">
-          </div>
-        </div>
-
-        <div class="field-group">
-          <div class="field">
-            <label for="status_solicitacao-{{ r.id_req }}">Status</label>
-            <select id="status_solicitacao-{{ r.id_req }}" name="status_solicitacao">
-              {% for st in status_emojis.keys() %}
-                <option value="{{ st }}" {% if r.status == st %}selected{% endif %}>
-                  {{ status_emojis[st] }} {{ st }}
-                </option>
-              {% endfor %}
+            <div class="field">
+            <label for="data-{{ v.id }}">Data</label>
+            <input type="date" id="data-{{ v.id }}" name="data_viagem" value="{{ v.data_viagem }}">
+            </div>
+            <div class="field">
+            <label for="status-{{ v.id }}">Status</label>
+            <select id="status-{{ v.id }}" name="status">
+                {% for st in status_viagem %}
+                <option value="{{ st }}" {% if v.status == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
             </select>
-          </div>
-          <div class="field">
-            <label for="comprador_responsavel-{{ r.id_req }}">Comprador</label>
-            <select id="comprador_responsavel-{{ r.id_req }}" name="comprador_responsavel">
-              {% for c in ["Karen","Bastos","Leandro"] %}
-              <option value="{{ c }}" {% if r.comprador_responsavel == c %}selected{% endif %}>{{ c }}</option>
-              {% endfor %}
-            </select>
-          </div>
+            </div>
         </div>
-
         <div class="field-group">
-          <div class="field">
-            <label for="data_conclusao-{{ r.id_req }}">Data Conclusão</label>
-            <input type="date" id="data_conclusao-{{ r.id_req }}" name="data_conclusao" value="{{ r.data_conclusao }}">
-          </div>
-          <div class="field">
-            <label for="numero_oc-{{ r.id_req }}">Número OC</label>
-            <input type="text" id="numero_oc-{{ r.id_req }}" name="numero_oc" value="{{ r.numero_oc }}">
-          </div>
+            <div class="field">
+            <label for="observacoes-{{ v.id }}">Observações</label>
+            <textarea id="observacoes-{{ v.id }}" name="observacoes">{{ v.observacoes }}</textarea>
+            </div>
         </div>
-
-        <div class="field-group">
-          <div class="field">
-            <label for="finalidade-{{ r.id_req }}">Finalidade da Requisição</label>
-            <textarea id="finalidade-{{ r.id_req }}" name="finalidade">{{ r.finalidade }}</textarea>
-          </div>
-          <div class="field">
-            <label for="obs_almoxarifado-{{ r.id_req }}">Observações Almoxarifado</label>
-            <textarea id="obs_almoxarifado-{{ r.id_req }}" name="obs_almoxarifado">{{ r.observacoes_almoxarifado }}</textarea>
-          </div>
-        </div>
-
         <button type="submit">Salvar Alterações</button>
-      </form>
+        </form>
     </div>
-  </div>
-  {% endfor %}
+    </div>
+    {% endfor %}
 </main>
 
 <script>
@@ -281,16 +218,14 @@
     card.setAttribute('aria-expanded', expanded);
   }
 
-  // Permite abrir/fechar via teclado
-  document.querySelectorAll('.rm-card').forEach(card => {
+  document.querySelectorAll('.viagem-card').forEach(card => {
     card.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        toggleDetails(card.querySelector('.rm-header'));
+        toggleDetails(card.querySelector('.viagem-header'));
       }
     });
   });
 </script>
-
 </body>
 </html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agendamento de Viagens</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 0 25px;
+    color: #333;
+    background: #f9fafb;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #1e293b;
+  }
+  form {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 30px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    margin-top: 20px;
+  }
+  input[type=text],
+  input[type=number],
+  input[type=date],
+  input[type=email],
+  select,
+  textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1.8px solid #cbd5e1;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #334155;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    text-transform: uppercase;
+  }
+  input[readonly] { background-color: #e2e8f0; cursor: not-allowed; }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+  }
+  textarea { resize: vertical; min-height: 90px; font-family: inherit; }
+  button[type=submit] {
+    margin-top: 30px;
+    background-color: #2563eb;
+    color: #fff;
+    padding: 14px 0;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.15rem;
+    width: 100%;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button[type=submit]:hover { background-color: #1d4ed8; }
+  .item-group {
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 20px 25px 25px 25px;
+    margin-top: 25px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+    position: relative;
+  }
+  .btn-remove-item {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    border-radius: 50%;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .btn-remove-item:hover { background-color: #ef4444; color: white; }
+  .btn-add-item {
+    background-color: #10b981;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 12px 0;
+    width: 100%;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    margin-top: 20px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+  }
+  .btn-add-item:hover { background-color: #059669; }
+</style>
+</head>
+<body>
+
+<a href="{{ url_for('novo_pedido') }}" class="back-button" style="text-decoration:none; padding:8px 16px; background:#2563eb; color:#fff; border-radius:6px; display:inline-block; cursor:pointer;">← Voltar</a>
+<h1>Agendamento de Viagens</h1>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div style="background:#d1fae5; color:#065f46; padding:15px; border-radius:8px; font-weight:700; margin-bottom:20px; text-align:center;">
+      {{ messages[0] }}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<form method="POST" enctype="multipart/form-data" action="{{ url_for('agendamento_viagens') }}">
+
+  <label for="rm">Número AV</label>
+  <input type="text" id="rm" name="rm" value="{{ proximo_rm }}" readonly />
+
+  <label for="status_viagem">Status da Viagem</label>
+  <input type="text" id="status_viagem" name="status_viagem" value="AGUARDANDO APROVAÇÃO" readonly />
+
+  <label for="data_solicitacao">Data da Solicitação</label>
+  <input type="date" id="data_solicitacao" name="data_solicitacao" value="{{ data_atual }}" required />
+
+  <label for="motorista">Motorista</label>
+  <input type="text" id="motorista" name="motorista" required />
+
+  <label for="veiculo">Veículo | Placa</label>
+  <input type="text" id="veiculo" name="veiculo" required />
+
+  <div id="lista-trechos">
+    <div class="item-group">
+      <button type="button" class="btn-remove-item" onclick="removerItem(this)" style="display:none;" aria-label="Remover Trecho">&times;</button>
+
+      <label>Trecho (Origem | Destino)</label>
+      <input type="text" name="trecho[]" placeholder="Ex: São Cristóvão | Macuco" required />
+
+      <label>Data da Viagem</label>
+      <input type="date" name="data_viagem[]" required />
+
+      <label>Hora de Saída</label>
+      <input type="text" name="hora_saida[]" placeholder="Ex: 08:30" required />
+
+      <label>Observações</label>
+      <textarea name="observacoes[]" rows="2"></textarea>
+    </div>
+  </div>
+
+  <button type="button" class="btn-add-item" onclick="adicionarItem()">Adicionar Trecho</button>
+
+  <label for="empresa">Empresa</label>
+  <input type="text" id="empresa" name="empresa" required />
+
+  <label for="prioridade">Nível de Prioridade</label>
+  <select id="prioridade" name="prioridade" required>
+    <option value="Baixa">Baixa - A partir de 07 dias</option>
+    <option value="Média">Média - 5 a 6 dias</option>
+    <option value="Alta">Alta - 3 a 4 dias</option>
+    <option value="Urgente">Urgente - 2 dias</option>
+    <option value="Imediato">Imediato - 24 horas</option>
+  </select>
+
+  <label for="email">E-mail para notificação</label>
+  <input type="email" id="email" name="email" required />
+
+  <button type="submit">Enviar Agendamento</button>
+</form>
+
+<script>
+function adicionarItem() {
+  const container = document.getElementById('lista-trechos');
+  const primeiroItem = container.querySelector('.item-group');
+  const novoItem = primeiroItem.cloneNode(true);
+  novoItem.querySelectorAll('input, textarea').forEach(input => input.value = '');
+  novoItem.querySelector('.btn-remove-item').style.display = 'inline-block';
+  container.appendChild(novoItem);
+}
+
+function removerItem(button) {
+  const container = document.getElementById('lista-trechos');
+  if(container.children.length > 1) {
+    button.parentElement.remove();
+  }
+}
+</script>
+
+</body>
+</html>
