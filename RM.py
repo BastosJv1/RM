@@ -309,6 +309,47 @@ funcionarios = [
     Funcionario("Bruno Costa", "bruno@empresa.com")
 ]
 
+# ============================
+# Funções para OCs no banco
+# ============================
+def salvar_oc_db(oc):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO ordens_de_compra (
+            numero_oc, descricao, quantidade, preco_unitario, data_solicitacao,
+            descricao_geral, categoria, centro_custo, fornecedor, previsao_entrega,
+            local_entrega, baixa, obs, condicoes_entrega, tipo_frete,
+            obs_almoxarifado, status_entrega, nf, natureza_nf, valor_inicial_proposta,
+            valor_final_proposta, link_nf
+        ) VALUES (
+            %(numero_oc)s, %(descricao)s, %(quantidade)s, %(preco_unitario)s, %(data_solicitacao)s,
+            %(descricao_geral)s, %(categoria)s, %(centro_custo)s, %(fornecedor)s, %(previsao_entrega)s,
+            %(local_entrega)s, %(baixa)s, %(obs)s, %(condicoes_entrega)s, %(tipo_frete)s,
+            %(obs_almoxarifado)s, %(status_entrega)s, %(nf)s, %(natureza_nf)s, %(valor_inicial_proposta)s,
+            %(valor_final_proposta)s, %(link_nf)s
+        );
+    """, oc)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def carregar_ocs_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM ordens_de_compra;")
+    linhas = cur.fetchall()
+    colunas = [desc[0] for desc in cur.description]
+    ocs = []
+    for linha in linhas:
+        ocs.append(dict(zip(colunas, linha)))
+    cur.close()
+    conn.close()
+    return ocs
+
+# Carrega OCs ao iniciar app
+ordens_de_compra = carregar_ocs_db()
+
 def salvar_requisicao_db(requisicao: Requisicao):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -325,6 +366,8 @@ def salvar_requisicao_db(requisicao: Requisicao):
     conn.commit()
     cur.close()
     conn.close()
+
+
 
 def carregar_requisicoes_db():
     requisicoes_lista = []
@@ -427,7 +470,9 @@ def novo_pedido():
 
         nova_req = Requisicao(id_req, requisitante, itens, finalidade=finalidade)
         nova_req.centro_custo = centro_custo  # adicionando o centro de custo
+        salvar_requisicao_db(nova_req)
         requisicoes.append(nova_req)
+
 
         flash(f"Requisição RM {id_req} enviada com sucesso ao setor de compras.")
         return redirect(url_for("novo_pedido"))
@@ -592,6 +637,9 @@ def oc():
             }
 
             ordens_de_compra.append(item)
+            # Salva cada item da OC no banco
+            salvar_oc_db(item)
+
 
         flash(f"Ordem de Compra {numero_oc} criada com {len(descricoes)} itens.", "success")
         return redirect(url_for("oc"))
